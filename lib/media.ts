@@ -20,6 +20,7 @@ export interface UploadMediaRequest {
   file: File | Blob;
   patient_id: number;
   category?: string;
+  metadata?: Record<string, any>;
 }
 
 export async function uploadMedia(data: UploadMediaRequest): Promise<ApiResponse<Media>> {
@@ -30,6 +31,9 @@ export async function uploadMedia(data: UploadMediaRequest): Promise<ApiResponse
   formData.append('patient_id', String(data.patient_id));
   if (data.category) {
     formData.append('category', data.category);
+  }
+  if (data.metadata) {
+    formData.append('metadata', JSON.stringify(data.metadata));
   }
 
   const res = await fetch(`${API_BASE_URL}/api/v1/media/upload`, {

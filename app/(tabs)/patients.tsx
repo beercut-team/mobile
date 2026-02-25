@@ -16,6 +16,7 @@ import { Card } from '@/components/ui/card';
 import { Colors } from '@/constants/theme';
 import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
 import {
   getPatients,
   STATUS_LABELS,
@@ -42,6 +43,28 @@ export default function PatientsScreen() {
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
+
+  const titleSize = useAccessibilityFontSize(28);
+  const searchIconSize = useAccessibilityFontSize(18);
+  const searchInputSize = useAccessibilityFontSize(15);
+  const searchBarHeight = useAccessibilityFontSize(44);
+  const searchBarRadius = useAccessibilityFontSize(14);
+  const filterLabelSize = useAccessibilityFontSize(12);
+  const filterDotSize = useAccessibilityFontSize(7);
+  const filterChipRadius = useAccessibilityFontSize(20);
+  const filterChipPaddingH = useAccessibilityFontSize(12);
+  const filterChipPaddingV = useAccessibilityFontSize(6);
+  const patientNameSize = useAccessibilityFontSize(16);
+  const patientMetaSize = useAccessibilityFontSize(13);
+  const statusTextSize = useAccessibilityFontSize(11);
+  const statusDotSize = useAccessibilityFontSize(6);
+  const statusBadgeRadius = useAccessibilityFontSize(12);
+  const statusBadgePaddingH = useAccessibilityFontSize(10);
+  const statusBadgePaddingV = useAccessibilityFontSize(4);
+  const diagnosisSize = useAccessibilityFontSize(13);
+  const dateTextSize = useAccessibilityFontSize(12);
+  const surgeryDateSize = useAccessibilityFontSize(12);
+  const emptyTextSize = useAccessibilityFontSize(15);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<PatientStatus | 'ALL'>('ALL');
@@ -70,28 +93,28 @@ export default function PatientsScreen() {
     <Card style={styles.patientCard}>
       <View style={styles.patientHeader}>
         <View style={styles.patientInfo}>
-          <ThemedText style={styles.patientName}>
+          <ThemedText style={[styles.patientName, { fontSize: patientNameSize }]}>
             {item.last_name} {item.first_name}
             {item.middle_name ? ` ${item.middle_name}` : ''}
           </ThemedText>
-          <ThemedText style={[styles.patientMeta, { color: colors.mutedForeground }]}>
+          <ThemedText style={[styles.patientMeta, { color: colors.mutedForeground, fontSize: patientMetaSize }]}>
             {OPERATION_LABELS[item.operation_type]} · {EYE_LABELS[item.eye]}
           </ThemedText>
         </View>
         <View
           style={[
             styles.statusBadge,
-            { backgroundColor: STATUS_COLORS[item.status] + '18' },
+            { backgroundColor: STATUS_COLORS[item.status] + '18', borderRadius: statusBadgeRadius, paddingHorizontal: statusBadgePaddingH, paddingVertical: statusBadgePaddingV },
           ]}
         >
           <View
             style={[
               styles.statusDot,
-              { backgroundColor: STATUS_COLORS[item.status] },
+              { backgroundColor: STATUS_COLORS[item.status], width: statusDotSize, height: statusDotSize, borderRadius: statusDotSize / 2 },
             ]}
           />
           <ThemedText
-            style={[styles.statusText, { color: STATUS_COLORS[item.status] }]}
+            style={[styles.statusText, { color: STATUS_COLORS[item.status], fontSize: statusTextSize }]}
           >
             {STATUS_LABELS[item.status]}
           </ThemedText>
@@ -100,7 +123,7 @@ export default function PatientsScreen() {
 
       {item.diagnosis && (
         <ThemedText
-          style={[styles.diagnosis, { color: colors.mutedForeground }]}
+          style={[styles.diagnosis, { color: colors.mutedForeground, fontSize: diagnosisSize }]}
           numberOfLines={1}
         >
           {item.diagnosis}
@@ -108,11 +131,11 @@ export default function PatientsScreen() {
       )}
 
       <View style={[styles.patientFooter, { borderTopColor: colors.border }]}>
-        <ThemedText style={[styles.dateText, { color: colors.mutedForeground }]}>
+        <ThemedText style={[styles.dateText, { color: colors.mutedForeground, fontSize: dateTextSize }]}>
           {new Date(item.created_at).toLocaleDateString('ru-RU')}
         </ThemedText>
         {item.surgery_date && (
-          <ThemedText style={[styles.surgeryDate, { color: colors.primary }]}>
+          <ThemedText style={[styles.surgeryDate, { color: colors.primary, fontSize: surgeryDateSize }]}>
             Операция: {new Date(item.surgery_date).toLocaleDateString('ru-RU')}
           </ThemedText>
         )}
@@ -123,7 +146,7 @@ export default function PatientsScreen() {
   return (
     <ThemedView style={styles.container}>
       <View style={[styles.headerArea, { paddingTop: insets.top + 8 }]}>
-        <ThemedText type="title" style={styles.title}>
+        <ThemedText type="title" style={[styles.title, { fontSize: titleSize }]}>
           Пациенты
         </ThemedText>
 
@@ -134,11 +157,13 @@ export default function PatientsScreen() {
             {
               backgroundColor: colors.inputBackground,
               borderColor: colors.border,
+              borderRadius: searchBarRadius,
+              height: searchBarHeight,
             },
           ]}
         >
-          <ThemedText style={{ color: colors.mutedForeground, fontSize: 18 }}>
-            ?
+          <ThemedText style={{ color: colors.mutedForeground, fontSize: searchIconSize }}>
+            🔍
           </ThemedText>
           <TextInput
             placeholder="Поиск по имени..."
@@ -148,7 +173,7 @@ export default function PatientsScreen() {
               setSearch(text);
               setPage(1);
             }}
-            style={[styles.searchInput, { color: colors.text }]}
+            style={[styles.searchInput, { color: colors.text, fontSize: searchInputSize }]}
           />
         </View>
 
@@ -177,19 +202,22 @@ export default function PatientsScreen() {
                       ? dotColor + '18'
                       : colors.muted,
                     borderColor: active ? dotColor + '40' : 'transparent',
+                    borderRadius: filterChipRadius,
+                    paddingHorizontal: filterChipPaddingH,
+                    paddingVertical: filterChipPaddingV,
                   },
                 ]}
               >
                 <View
                   style={[
                     styles.filterDot,
-                    { backgroundColor: dotColor, opacity: active ? 1 : 0.4 },
+                    { backgroundColor: dotColor, opacity: active ? 1 : 0.4, width: filterDotSize, height: filterDotSize, borderRadius: filterDotSize / 2 },
                   ]}
                 />
                 <ThemedText
                   style={[
                     styles.filterLabel,
-                    { color: active ? dotColor : colors.mutedForeground },
+                    { color: active ? dotColor : colors.mutedForeground, fontSize: filterLabelSize },
                   ]}
                 >
                   {label}
@@ -216,7 +244,7 @@ export default function PatientsScreen() {
         ListEmptyComponent={
           !isLoading ? (
             <View style={styles.empty}>
-              <ThemedText style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              <ThemedText style={[styles.emptyText, { color: colors.mutedForeground, fontSize: emptyTextSize }]}>
                 Пациенты не найдены
               </ThemedText>
             </View>
@@ -242,22 +270,18 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   title: {
-    fontSize: 28,
     marginBottom: 16,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
     borderWidth: 1,
     paddingHorizontal: 14,
-    height: 44,
     gap: 8,
     marginBottom: 12,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
     height: '100%',
   },
   filterList: {
@@ -268,18 +292,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
     borderWidth: 1,
   },
-  filterDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-  },
+  filterDot: {},
   filterLabel: {
-    fontSize: 12,
     fontWeight: '500',
   },
   list: {
@@ -301,51 +317,34 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   patientName: {
-    fontSize: 16,
     fontWeight: '600',
   },
   patientMeta: {
-    fontSize: 13,
     marginTop: 3,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
+  statusDot: {},
   statusText: {
-    fontSize: 11,
     fontWeight: '600',
   },
-  diagnosis: {
-    fontSize: 13,
-  },
+  diagnosis: {},
   patientFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  dateText: {
-    fontSize: 12,
-  },
+  dateText: {},
   surgeryDate: {
-    fontSize: 12,
     fontWeight: '500',
   },
   empty: {
     alignItems: 'center',
     paddingVertical: 60,
   },
-  emptyText: {
-    fontSize: 15,
-  },
+  emptyText: {},
 });

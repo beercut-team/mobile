@@ -4,11 +4,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Card } from '@/components/ui/card';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { getDashboard, STATUS_LABELS, STATUS_COLORS, type PatientStatus } from '@/lib/patients';
+import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
+import { getDashboard, STATUS_LABELS, type PatientStatus } from '@/lib/patients';
 import { getUnreadCount } from '@/lib/notifications';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -18,12 +20,36 @@ const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Администратор',
 };
 
+// Readiness percentage for each status (workflow completion)
+const STATUS_READINESS: Record<PatientStatus, number> = {
+  NEW: 10,
+  PREPARATION: 30,
+  REVIEW_NEEDED: 50,
+  APPROVED: 70,
+  SURGERY_SCHEDULED: 90,
+  COMPLETED: 100,
+  REJECTED: 0,
+};
+
 export default function HomeScreen() {
   const { user, hasRole } = useAuth();
   const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
+
+  const greetingSize = useAccessibilityFontSize(15);
+  const roleTextSize = useAccessibilityFontSize(12);
+  const notifTextSize = useAccessibilityFontSize(14);
+  const statCountSize = useAccessibilityFontSize(28);
+  const statLabelSize = useAccessibilityFontSize(12);
+  const actionIconSize = useAccessibilityFontSize(24);
+  const actionLabelSize = useAccessibilityFontSize(13);
+  const welcomeTextSize = useAccessibilityFontSize(14);
+  const dotSize = useAccessibilityFontSize(8);
+  const rolePadding = useAccessibilityFontSize(12);
+  const borderRadius = useAccessibilityFontSize(12);
+  const actionIconContainerSize = useAccessibilityFontSize(48);
 
   const showDashboard = hasRole('DISTRICT_DOCTOR', 'SURGEON', 'ADMIN');
 
@@ -61,15 +87,15 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <ThemedText style={[styles.greeting, { color: colors.mutedForeground }]}>
+            <ThemedText style={[styles.greeting, { color: colors.mutedForeground, fontSize: greetingSize }]}>
               {greeting()}
             </ThemedText>
             <ThemedText type="title" style={styles.name}>
               {user?.name ?? user?.first_name ?? 'Пользователь'}
             </ThemedText>
           </View>
-          <View style={[styles.roleBadge, { backgroundColor: colors.primary + '15' }]}>
-            <ThemedText style={[styles.roleText, { color: colors.primary }]}>
+          <View style={[styles.roleBadge, { backgroundColor: colors.primary + '15', paddingHorizontal: rolePadding, paddingVertical: rolePadding / 2, borderRadius }]}>
+            <ThemedText style={[styles.roleText, { color: colors.primary, fontSize: roleTextSize }]}>
               {ROLE_LABELS[user?.role ?? ''] ?? user?.role}
             </ThemedText>
           </View>
@@ -79,8 +105,8 @@ export default function HomeScreen() {
         {unread != null && unread > 0 && (
           <Card style={[styles.notifCard, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
             <View style={styles.notifContent}>
-              <View style={[styles.notifDot, { backgroundColor: colors.primary }]} />
-              <ThemedText style={styles.notifText}>
+              <View style={[styles.notifDot, { backgroundColor: colors.primary, width: dotSize, height: dotSize, borderRadius: dotSize / 2 }]} />
+              <ThemedText style={[styles.notifText, { fontSize: notifTextSize }]}>
                 {unread} {unread === 1 ? 'новое уведомление' : unread < 5 ? 'новых уведомления' : 'новых уведомлений'}
               </ThemedText>
             </View>
@@ -96,12 +122,22 @@ export default function HomeScreen() {
             <View style={styles.statsGrid}>
               {(Object.entries(stats) as [PatientStatus, number][]).map(([status, count]) => {
                 if (!STATUS_LABELS[status]) return null;
+                const readiness = STATUS_READINESS[status];
                 return (
                   <Card key={status} style={styles.statCard}>
-                    <View style={[styles.statDot, { backgroundColor: STATUS_COLORS[status] }]} />
-                    <ThemedText style={styles.statCount}>{count}</ThemedText>
-                    <ThemedText style={[styles.statLabel, { color: colors.mutedForeground }]}>
-                      {STATUS_LABELS[status]}
+                    <View style={styles.statHeader}>
+                      <StatusBadge
+                        status={STATUS_LABELS[status]}
+                        percentage={readiness}
+                        size="sm"
+                      />
+                      <ThemedText style={[styles.readinessText, { color: colors.mutedForeground, fontSize: statLabelSize }]}>
+                        {readiness}%
+                      </ThemedText>
+                    </View>
+                    <ThemedText style={[styles.statCount, { fontSize: statCountSize }]}>{count}</ThemedText>
+                    <ThemedText style={[styles.statLabel, { color: colors.mutedForeground, fontSize: statLabelSize }]}>
+                      {count === 1 ? 'пациент' : count < 5 ? 'пациента' : 'пациентов'}
                     </ThemedText>
                   </Card>
                 );
@@ -120,18 +156,18 @@ export default function HomeScreen() {
               <Card
                 style={[styles.actionCard, { borderColor: colors.primary + '30' }]}
               >
-                <View style={[styles.actionIcon, { backgroundColor: colors.primary + '15' }]}>
-                  <ThemedText style={{ fontSize: 24 }}>+</ThemedText>
+                <View style={[styles.actionIcon, { backgroundColor: colors.primary + '15', width: actionIconContainerSize, height: actionIconContainerSize, borderRadius: actionIconContainerSize / 3 }]}>
+                  <ThemedText style={{ fontSize: actionIconSize }}>+</ThemedText>
                 </View>
-                <ThemedText style={styles.actionLabel}>Новый пациент</ThemedText>
+                <ThemedText style={[styles.actionLabel, { fontSize: actionLabelSize }]}>Новый пациент</ThemedText>
               </Card>
               <Card
                 style={[styles.actionCard, { borderColor: '#8B5CF6' + '30' }]}
               >
-                <View style={[styles.actionIcon, { backgroundColor: '#8B5CF6' + '15' }]}>
-                  <ThemedText style={{ fontSize: 24 }}>?</ThemedText>
+                <View style={[styles.actionIcon, { backgroundColor: '#8B5CF6' + '15', width: actionIconContainerSize, height: actionIconContainerSize, borderRadius: actionIconContainerSize / 3 }]}>
+                  <ThemedText style={{ fontSize: actionIconSize }}>?</ThemedText>
                 </View>
-                <ThemedText style={styles.actionLabel}>На проверке</ThemedText>
+                <ThemedText style={[styles.actionLabel, { fontSize: actionLabelSize }]}>На проверке</ThemedText>
               </Card>
             </View>
           </View>
@@ -142,7 +178,7 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <Card style={styles.welcomeCard}>
               <ThemedText type="subtitle">Добро пожаловать!</ThemedText>
-              <ThemedText style={[styles.welcomeText, { color: colors.mutedForeground }]}>
+              <ThemedText style={[styles.welcomeText, { color: colors.mutedForeground, fontSize: welcomeTextSize }]}>
                 Вы можете просматривать уведомления и информацию о своём аккаунте в профиле.
               </ThemedText>
             </Card>
@@ -167,20 +203,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   greeting: {
-    fontSize: 15,
     marginBottom: 4,
   },
-  name: {
-    fontSize: 26,
-  },
+  name: {},
   roleBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
     marginTop: 4,
   },
   roleText: {
-    fontSize: 12,
     fontWeight: '600',
   },
   notifCard: {
@@ -192,13 +221,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  notifDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
+  notifDot: {},
   notifText: {
-    fontSize: 14,
     fontWeight: '500',
   },
   section: {
@@ -217,19 +241,21 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 16,
     alignItems: 'flex-start',
-    gap: 6,
+    gap: 8,
   },
-  statDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  statHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  readinessText: {
+    fontWeight: '600',
   },
   statCount: {
-    fontSize: 28,
     fontWeight: '700',
   },
   statLabel: {
-    fontSize: 12,
     fontWeight: '500',
   },
   actionsRow: {
@@ -243,14 +269,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionLabel: {
-    fontSize: 13,
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -258,7 +280,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   welcomeText: {
-    fontSize: 14,
     lineHeight: 20,
   },
 });

@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Colors } from '@/constants/theme';
 import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
 import {
   getNotifications,
   markAsRead,
@@ -28,6 +29,17 @@ export default function NotificationsScreen() {
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+
+  const titleSize = useAccessibilityFontSize(28);
+  const notifTitleSize = useAccessibilityFontSize(15);
+  const notifMessageSize = useAccessibilityFontSize(13);
+  const notifDateSize = useAccessibilityFontSize(11);
+  const emptyIconSize = useAccessibilityFontSize(40);
+  const emptyTextSize = useAccessibilityFontSize(15);
+  const unreadDotSize = useAccessibilityFontSize(8);
+  const borderRadius = useAccessibilityFontSize(14);
+  const markAllBtnHeight = useAccessibilityFontSize(36);
+  const markAllBtnPadding = useAccessibilityFontSize(12);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['notifications'],
@@ -85,24 +97,25 @@ export default function NotificationsScreen() {
             : colors.primary + '08',
           borderColor: item.is_read ? colors.border : colors.primary + '25',
           opacity: pressed ? 0.8 : 1,
+          borderRadius,
         },
       ]}
     >
       <View style={styles.notifRow}>
         {!item.is_read && (
-          <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
+          <View style={[styles.unreadDot, { backgroundColor: colors.primary, width: unreadDotSize, height: unreadDotSize, borderRadius: unreadDotSize / 2 }]} />
         )}
         <View style={styles.notifContent}>
-          <ThemedText style={styles.notifTitle} numberOfLines={1}>
+          <ThemedText style={[styles.notifTitle, { fontSize: notifTitleSize }]} numberOfLines={1}>
             {item.title}
           </ThemedText>
           <ThemedText
-            style={[styles.notifMessage, { color: colors.mutedForeground }]}
+            style={[styles.notifMessage, { color: colors.mutedForeground, fontSize: notifMessageSize }]}
             numberOfLines={2}
           >
             {item.message}
           </ThemedText>
-          <ThemedText style={[styles.notifDate, { color: colors.mutedForeground }]}>
+          <ThemedText style={[styles.notifDate, { color: colors.mutedForeground, fontSize: notifDateSize }]}>
             {formatDate(item.created_at)}
           </ThemedText>
         </View>
@@ -113,7 +126,7 @@ export default function NotificationsScreen() {
   return (
     <ThemedView style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <ThemedText type="title" style={styles.title}>
+        <ThemedText type="title" style={[styles.title, { fontSize: titleSize }]}>
           Уведомления
         </ThemedText>
         {hasUnread && (
@@ -121,7 +134,7 @@ export default function NotificationsScreen() {
             variant="ghost"
             onPress={() => markAllMutation.mutate()}
             loading={markAllMutation.isPending}
-            style={styles.markAllBtn}
+            style={[styles.markAllBtn, { height: markAllBtnHeight, paddingHorizontal: markAllBtnPadding }]}
           >
             Прочитать все
           </Button>
@@ -143,10 +156,10 @@ export default function NotificationsScreen() {
         ListEmptyComponent={
           !isLoading ? (
             <View style={styles.empty}>
-              <ThemedText style={{ fontSize: 40, marginBottom: 12 }}>
-                ?
+              <ThemedText style={{ fontSize: emptyIconSize, marginBottom: 12 }}>
+                📭
               </ThemedText>
-              <ThemedText style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              <ThemedText style={[styles.emptyText, { color: colors.mutedForeground, fontSize: emptyTextSize }]}>
                 Нет уведомлений
               </ThemedText>
             </View>
@@ -168,20 +181,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 12,
   },
-  title: {
-    fontSize: 28,
-  },
-  markAllBtn: {
-    height: 36,
-    paddingHorizontal: 12,
-  },
+  title: {},
+  markAllBtn: {},
   list: {
     padding: 20,
     paddingTop: 4,
     gap: 10,
   },
   notifItem: {
-    borderRadius: 14,
     borderWidth: 1,
     padding: 16,
   },
@@ -191,9 +198,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
     marginTop: 6,
   },
   notifContent: {
@@ -201,22 +205,17 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   notifTitle: {
-    fontSize: 15,
     fontWeight: '600',
   },
   notifMessage: {
-    fontSize: 13,
     lineHeight: 18,
   },
   notifDate: {
-    fontSize: 11,
     marginTop: 4,
   },
   empty: {
     alignItems: 'center',
     paddingVertical: 80,
   },
-  emptyText: {
-    fontSize: 15,
-  },
+  emptyText: {},
 });

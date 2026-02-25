@@ -35,6 +35,8 @@ export function Button({
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const fontSize = useAccessibilityFontSize(16);
   const buttonHeight = useAccessibilityFontSize(48);
+  const borderRadius = useAccessibilityFontSize(12);
+  const paddingHorizontal = useAccessibilityFontSize(24);
 
   const variantStyles: Record<ButtonVariant, ViewStyle> = {
     default: {
@@ -67,7 +69,7 @@ export function Button({
       disabled={isDisabled}
       style={({ pressed }) => [
         styles.base,
-        { height: buttonHeight },
+        { height: buttonHeight, borderRadius, paddingHorizontal },
         variantStyles[variant],
         pressed && styles.pressed,
         isDisabled && styles.disabled,
@@ -88,10 +90,8 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
   },
   text: {
     fontWeight: '600',

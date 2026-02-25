@@ -20,10 +20,19 @@ const MAPPING = {
   'plus.circle.fill': 'add-circle',
   'magnifyingglass': 'search',
   'xmark': 'close',
+  'xmark.circle.fill': 'cancel',
+  'ellipsis.circle.fill': 'more-horiz',
+  'checkmark': 'check',
   'checkmark.circle.fill': 'check-circle',
+  'checkmark.seal.fill': 'verified',
+  'arrow.uturn.backward.circle.fill': 'undo',
   'exclamationmark.triangle.fill': 'warning',
+  'exclamationmark.triangle': 'warning',
   'eye.fill': 'visibility',
   'doc.text.fill': 'description',
+  'paperclip': 'attach-file',
+  'checklist': 'checklist',
+  'trash': 'delete',
 } as IconMapping;
 
 export function IconSymbol({

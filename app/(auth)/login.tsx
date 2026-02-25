@@ -7,12 +7,13 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
 import { Colors } from '@/constants/theme';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,14 +30,18 @@ function validateEmail(email: string): boolean {
 
 export default function LoginScreen() {
   const { login } = useAuth();
-  const router = useRouter();
   const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
 
+  const titleSize = useAccessibilityFontSize(28);
+  const subtitleSize = useAccessibilityFontSize(16);
+  const errorTitleSize = useAccessibilityFontSize(14);
+  const errorTextSize = useAccessibilityFontSize(13);
+  const borderRadius = useAccessibilityFontSize(12);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -100,21 +105,21 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>
+          <Text style={[styles.title, { color: colors.text, fontSize: titleSize }]}>
             Вход в аккаунт
           </Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground, fontSize: subtitleSize }]}>
             Войдите, чтобы продолжить
           </Text>
         </View>
 
         {/* Server Error */}
         {mutation.error && (
-          <View style={[styles.serverError, { backgroundColor: colors.destructive + '12', borderColor: colors.destructive + '30' }]}>
-            <Text style={[styles.serverErrorTitle, { color: colors.destructive }]}>
+          <View style={[styles.serverError, { backgroundColor: colors.destructive + '12', borderColor: colors.destructive + '30', borderRadius }]}>
+            <Text style={[styles.serverErrorTitle, { color: colors.destructive, fontSize: errorTitleSize }]}>
               Ошибка входа
             </Text>
-            <Text style={[styles.serverErrorText, { color: colors.destructive }]}>
+            <Text style={[styles.serverErrorText, { color: colors.destructive, fontSize: errorTextSize }]}>
               {mutation.error.message}
             </Text>
           </View>
@@ -183,26 +188,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
-  },
+  subtitle: {},
   serverError: {
-    borderRadius: 12,
     borderWidth: 1,
     padding: 14,
     marginBottom: 16,
   },
   serverErrorTitle: {
-    fontSize: 14,
     fontWeight: '600',
     marginBottom: 4,
   },
   serverErrorText: {
-    fontSize: 13,
     lineHeight: 18,
   },
   card: {

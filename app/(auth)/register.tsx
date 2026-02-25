@@ -8,13 +8,14 @@ import {
   View,
   Pressable,
 } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useAccessibility } from '@/contexts/accessibility-context';
 import { useToast } from '@/contexts/toast-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
 import { Colors } from '@/constants/theme';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,10 +44,19 @@ function validateEmail(email: string): boolean {
 export default function RegisterScreen() {
   const { register } = useAuth();
   const { showToast } = useToast();
-  const router = useRouter();
   const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
+
+  const titleSize = useAccessibilityFontSize(28);
+  const subtitleSize = useAccessibilityFontSize(15);
+  const errorTitleSize = useAccessibilityFontSize(14);
+  const errorTextSize = useAccessibilityFontSize(13);
+  const fieldLabelSize = useAccessibilityFontSize(14);
+  const roleLabelSize = useAccessibilityFontSize(15);
+  const roleDescSize = useAccessibilityFontSize(12);
+  const borderRadius = useAccessibilityFontSize(12);
+  const roleCardPadding = useAccessibilityFontSize(14);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -58,11 +68,12 @@ export default function RegisterScreen() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const handlePhoneChange = useCallback((text: string) => {
-    setPhone(applyPhoneMask(text));
+    const newValue = applyPhoneMask(text, phone);
+    setPhone(newValue);
     if (touched.phone) {
       setErrors((prev) => ({ ...prev, phone: undefined }));
     }
-  }, [touched.phone]);
+  }, [phone, touched.phone]);
 
   const handleBlur = useCallback((field: keyof FieldErrors) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -160,21 +171,21 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>
+          <Text style={[styles.title, { color: colors.text, fontSize: titleSize }]}>
             Регистрация
           </Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground, fontSize: subtitleSize }]}>
             Создайте аккаунт для начала работы
           </Text>
         </View>
 
         {/* Server Error */}
         {mutation.error && (
-          <View style={[styles.serverError, { backgroundColor: colors.destructive + '12', borderColor: colors.destructive + '30' }]}>
-            <Text style={[styles.serverErrorTitle, { color: colors.destructive }]}>
+          <View style={[styles.serverError, { backgroundColor: colors.destructive + '12', borderColor: colors.destructive + '30', borderRadius }]}>
+            <Text style={[styles.serverErrorTitle, { color: colors.destructive, fontSize: errorTitleSize }]}>
               Ошибка регистрации
             </Text>
-            <Text style={[styles.serverErrorText, { color: colors.destructive }]}>
+            <Text style={[styles.serverErrorText, { color: colors.destructive, fontSize: errorTextSize }]}>
               {mutation.error.message}
             </Text>
           </View>
@@ -182,7 +193,7 @@ export default function RegisterScreen() {
 
         <Card style={styles.card}>
           {/* Role Selection */}
-          <Text style={[styles.fieldLabel, { color: colors.text }]}>
+          <Text style={[styles.fieldLabel, { color: colors.text, fontSize: fieldLabelSize }]}>
             Выберите роль
           </Text>
           <View style={styles.roleGrid}>
@@ -197,19 +208,21 @@ export default function RegisterScreen() {
                     {
                       backgroundColor: active ? colors.primary + '10' : colors.muted,
                       borderColor: active ? colors.primary : colors.border,
+                      borderRadius,
+                      padding: roleCardPadding,
                     },
                   ]}
                 >
                   <Text
                     style={[
                       styles.roleLabel,
-                      { color: active ? colors.primary : colors.text },
+                      { color: active ? colors.primary : colors.text, fontSize: roleLabelSize },
                     ]}
                   >
                     {r.label}
                   </Text>
                   <Text
-                    style={[styles.roleDesc, { color: colors.mutedForeground }]}
+                    style={[styles.roleDesc, { color: colors.mutedForeground, fontSize: roleDescSize }]}
                   >
                     {r.desc}
                   </Text>
@@ -314,33 +327,26 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 15,
-  },
+  subtitle: {},
   serverError: {
-    borderRadius: 12,
     borderWidth: 1,
     padding: 14,
     marginBottom: 16,
   },
   serverErrorTitle: {
-    fontSize: 14,
     fontWeight: '600',
     marginBottom: 4,
   },
   serverErrorText: {
-    fontSize: 13,
     lineHeight: 18,
   },
   card: {
     gap: 0,
   },
   fieldLabel: {
-    fontSize: 14,
     fontWeight: '500',
     marginBottom: 8,
   },
@@ -349,16 +355,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   roleCard: {
-    borderRadius: 12,
     borderWidth: 1.5,
-    padding: 14,
   },
   roleLabel: {
-    fontSize: 15,
     fontWeight: '600',
   },
   roleDesc: {
-    fontSize: 12,
     marginTop: 2,
   },
   field: {

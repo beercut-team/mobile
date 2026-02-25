@@ -41,6 +41,10 @@ export function Input({
   const inputFontSize = useAccessibilityFontSize(16);
   const errorFontSize = useAccessibilityFontSize(13);
   const inputHeight = useAccessibilityFontSize(48);
+  const iconSize = useAccessibilityFontSize(20);
+  const borderRadius = useAccessibilityFontSize(12);
+  const toggleButtonRight = useAccessibilityFontSize(12);
+  const toggleButtonPadding = useAccessibilityFontSize(48);
 
   const shouldShowToggle = showPasswordToggle && secureTextEntry;
 
@@ -73,7 +77,8 @@ export function Input({
                 : focused
                   ? colors.ring
                   : colors.border,
-              paddingRight: shouldShowToggle ? 48 : 16,
+              paddingRight: shouldShowToggle ? toggleButtonPadding : 16,
+              borderRadius,
             },
             style,
           ]}
@@ -82,12 +87,12 @@ export function Input({
         {shouldShowToggle && (
           <Pressable
             onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-            style={styles.toggleButton}
+            style={[styles.toggleButton, { right: toggleButtonRight }]}
             hitSlop={8}
           >
             <Ionicons
               name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
-              size={20}
+              size={iconSize}
               color={colors.mutedForeground}
             />
           </Pressable>
@@ -111,13 +116,11 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   input: {
-    borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 16,
   },
   toggleButton: {
     position: 'absolute',
-    right: 12,
     top: 0,
     bottom: 0,
     justifyContent: 'center',

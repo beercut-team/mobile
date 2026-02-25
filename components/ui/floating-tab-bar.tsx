@@ -1,47 +1,102 @@
-import { View, Pressable, StyleSheet, Platform } from 'react-native';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type {
+  BottomTabBarProps,
+  BottomTabNavigationOptions,
+} from '@react-navigation/bottom-tabs';
+import * as Haptics from 'expo-haptics';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
-  withSpring,
   useSharedValue,
-  withTiming,
+  withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 
 import { Colors } from '@/constants/theme';
+import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+type TabBarOptions = BottomTabNavigationOptions & { href?: unknown };
 
-export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+function isRouteVisible(options: TabBarOptions): boolean {
+  return options.href !== null;
+}
+
+function getTabLabel(options: TabBarOptions, routeName: string): string {
+  if (typeof options.tabBarLabel === 'string') return options.tabBarLabel;
+  if (typeof options.title === 'string') return options.title;
+  return routeName;
+}
+
+function resolveActiveRouteName(
+  currentRouteName: string,
+  visibleRouteNames: Set<string>,
+  fallbackRouteName: string,
+): string {
+  if (visibleRouteNames.has(currentRouteName)) return currentRouteName;
+
+  if (currentRouteName.startsWith('patients/') && visibleRouteNames.has('patients')) {
+    return 'patients';
+  }
+
+  if (
+    (currentRouteName === 'notifications' || currentRouteName === 'profile') &&
+    visibleRouteNames.has('more')
+  ) {
+    return 'more';
+  }
+
+  return fallbackRouteName;
+}
+
+export function FloatingTabBar({
+  state,
+  descriptors,
+  navigation,
+}: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const theme = useColorScheme() ?? 'light';
-  const colors = Colors[theme];
+  const { isAccessibilityMode } = useAccessibility();
+  const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
+
+  const visibleRoutes = state.routes.filter((route) => {
+    const options = descriptors[route.key]?.options as TabBarOptions;
+    return isRouteVisible(options);
+  });
+
+  if (!visibleRoutes.length) return null;
+
+  const visibleRouteNames = new Set(visibleRoutes.map((route) => route.name));
+  const currentRouteName = state.routes[state.index]?.name ?? visibleRoutes[0].name;
+  const activeRouteName = resolveActiveRouteName(
+    currentRouteName,
+    visibleRouteNames,
+    visibleRoutes[0].name,
+  );
 
   return (
     <View
       style={[
         styles.container,
         {
-          paddingBottom: Math.max(insets.bottom, 12),
+          paddingBottom: Math.max(insets.bottom, 10),
         },
       ]}
       pointerEvents="box-none"
     >
       <View
         style={[
-          styles.bar,
+          styles.tabBar,
           {
-            backgroundColor: theme === 'dark' ? 'rgba(28, 30, 32, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+            backgroundColor: colors.card,
             borderColor: colors.border,
-            shadowColor: theme === 'dark' ? '#000' : '#000',
           },
         ]}
       >
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
-          const isFocused = state.index === index;
+        {visibleRoutes.map((route) => {
+          const options = descriptors[route.key]?.options as TabBarOptions;
+          const isFocused = route.name === activeRouteName;
+          const label = getTabLabel(options, route.name);
 
           const onPress = () => {
             const event = navigation.emit({
@@ -58,12 +113,22 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
             }
           };
 
+          const onLongPress = () => {
+            navigation.emit({
+              type: 'tabLongPress',
+              target: route.key,
+            });
+          };
+
           return (
-            <TabItem
+            <TabButton
               key={route.key}
+              label={label}
               isFocused={isFocused}
               onPress={onPress}
-              options={options}
+              onLongPress={onLongPress}
+              renderIcon={options.tabBarIcon}
+              testID={options.tabBarButtonTestID}
               colors={colors}
             />
           );
@@ -73,25 +138,29 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   );
 }
 
-function TabItem({
-  isFocused,
-  onPress,
-  options,
-  colors,
-}: {
+interface TabButtonProps {
+  label: string;
   isFocused: boolean;
   onPress: () => void;
-  options: Record<string, any>;
+  onLongPress: () => void;
+  renderIcon?: TabBarOptions['tabBarIcon'];
+  testID?: string;
   colors: (typeof Colors)['light'];
-}) {
+}
+
+function TabButton({
+  label,
+  isFocused,
+  onPress,
+  onLongPress,
+  renderIcon,
+  testID,
+  colors,
+}: TabButtonProps) {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-  }));
-
-  const bgStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(isFocused ? 1 : 0, { duration: 200 }),
   }));
 
   const handlePressIn = () => {
@@ -102,38 +171,41 @@ function TabItem({
     scale.value = withSpring(1, { damping: 15, stiffness: 400 });
   };
 
-  const label = options.title ?? '';
   const color = isFocused ? colors.primary : colors.mutedForeground;
 
   return (
     <AnimatedPressable
       onPress={onPress}
+      onLongPress={onLongPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       style={[styles.tab, animatedStyle]}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: isFocused }}
+      accessibilityLabel={label}
+      testID={testID}
     >
-      <Animated.View
+      <View
         style={[
-          styles.tabBg,
-          { backgroundColor: colors.primary + '15' },
-          bgStyle,
+          styles.tabInner,
+          {
+            backgroundColor: isFocused ? colors.primary + '15' : 'transparent',
+          },
         ]}
-      />
-      <View style={styles.tabContent}>
-        {options.tabBarIcon?.({ color, size: 24, focused: isFocused })}
-        <Animated.Text
+      >
+        {renderIcon?.({ color, size: 20, focused: isFocused })}
+        <Text
           style={[
-            styles.tabLabel,
+            styles.label,
             {
               color,
-              fontWeight: isFocused ? '600' : '400',
-              fontSize: isFocused ? 11 : 10,
+              fontWeight: isFocused ? '600' : '500',
             },
           ]}
           numberOfLines={1}
         >
           {label}
-        </Animated.Text>
+        </Text>
       </View>
     </AnimatedPressable>
   );
@@ -145,50 +217,51 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
-  bar: {
+  tabBar: {
+    width: '100%',
+    maxWidth: 560,
     flexDirection: 'row',
-    borderRadius: 28,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
     borderWidth: 1,
+    gap: 4,
     ...Platform.select({
       ios: {
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 14,
       },
       android: {
-        elevation: 12,
+        elevation: 8,
       },
-      default: {
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 24,
+      web: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 14,
       },
     }),
   },
   tab: {
     flex: 1,
+    minWidth: 0,
+  },
+  tabInner: {
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-    paddingVertical: 6,
-    borderRadius: 20,
-    overflow: 'hidden',
+    minHeight: 54,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    gap: 4,
   },
-  tabBg: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 20,
-  },
-  tabContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  tabLabel: {
-    marginTop: 2,
+  label: {
+    fontSize: 11,
+    textAlign: 'center',
   },
 });

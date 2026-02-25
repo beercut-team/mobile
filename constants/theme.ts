@@ -20,6 +20,8 @@ export const Colors = {
     muted: '#F4F4F5',
     mutedForeground: '#71717A',
     destructive: '#EF4444',
+    warning: '#F59E0B',
+    success: '#10B981',
     ring: '#0a7ea4',
     inputBackground: '#F4F4F5',
     card: '#FFFFFF',
@@ -38,6 +40,8 @@ export const Colors = {
     muted: '#27272A',
     mutedForeground: '#A1A1AA',
     destructive: '#DC2626',
+    warning: '#D97706',
+    success: '#059669',
     ring: '#fff',
     inputBackground: '#1E2022',
     card: '#1C1E20',
@@ -57,6 +61,8 @@ export const Colors = {
     muted: '#F0F0F0',
     mutedForeground: '#000000',
     destructive: '#CC0000',
+    warning: '#CC6600',
+    success: '#008800',
     ring: '#0066CC',
     inputBackground: '#FFFFFF',
     card: '#FFFFFF',
@@ -91,5 +97,5 @@ export const Fonts = Platform.select({
   },
 });
 
-// Font size multiplier for accessibility mode
-export const AccessibilityFontScale = 1.3;
+// Font size multiplier for accessibility mode (2.0 = 100% increase for visually impaired)
+export const AccessibilityFontScale = 2.0;
