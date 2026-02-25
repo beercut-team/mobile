@@ -10,7 +10,7 @@ async function attemptRefresh(): Promise<string | null> {
   if (!tokens?.refreshToken) return null;
 
   try {
-    const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: tokens.refreshToken }),
@@ -50,7 +50,6 @@ export async function apiFetch<T>(
   });
 
   if (res.status === 401 && tokens?.refreshToken) {
-    // Deduplicate concurrent refresh attempts
     if (!isRefreshing) {
       isRefreshing = true;
       refreshPromise = attemptRefresh().finally(() => {
@@ -77,7 +76,7 @@ export async function apiFetch<T>(
     let message = res.statusText;
     try {
       const body = await res.json();
-      message = body.message ?? body.detail ?? message;
+      message = body.error ?? body.message ?? body.detail ?? message;
     } catch {}
     throw new ApiError(res.status, message);
   }

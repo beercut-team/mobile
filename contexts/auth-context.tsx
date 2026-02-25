@@ -13,15 +13,19 @@ import {
   getMe,
   logoutUser as apiLogout,
   type UserResponse,
+  type UserRole,
+  type RegisterRequest,
 } from '@/lib/auth';
 import { getTokens, setTokens, clearTokens } from '@/lib/token-storage';
+import { queryClient } from '@/lib/query-client';
 
 interface AuthContextValue {
   user: UserResponse | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
+  hasRole: (...roles: UserRole[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -56,31 +60,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(me);
   }, []);
 
-  const register = useCallback(
-    async (email: string, password: string, name: string) => {
-      const authRes = await registerUser({ email, password, name });
-      await setTokens({
-        accessToken: authRes.access_token,
-        refreshToken: authRes.refresh_token,
-      });
-      const me = await getMe();
-      setUser(me);
-    },
-    [],
-  );
+  const register = useCallback(async (data: RegisterRequest) => {
+    const authRes = await registerUser(data);
+    await setTokens({
+      accessToken: authRes.access_token,
+      refreshToken: authRes.refresh_token,
+    });
+    const me = await getMe();
+    setUser(me);
+  }, []);
 
   const logout = useCallback(async () => {
     try {
       await apiLogout();
     } catch {
-      // Logout API call may fail, that's okay
+      // ignore
     }
     await clearTokens();
+    queryClient.clear();
     setUser(null);
   }, []);
 
+  const hasRole = useCallback(
+    (...roles: UserRole[]) => {
+      if (!user) return false;
+      return roles.includes(user.role);
+    },
+    [user],
+  );
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

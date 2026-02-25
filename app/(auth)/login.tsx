@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +17,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 
+interface FieldErrors {
+  email?: string;
+  password?: string;
+}
+
+function validateEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export default function LoginScreen() {
   const { login } = useAuth();
   const theme = useColorScheme() ?? 'light';
@@ -24,13 +33,56 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const handleBlur = useCallback((field: keyof FieldErrors) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+
+    setErrors((prev) => {
+      const next = { ...prev };
+      switch (field) {
+        case 'email':
+          if (!email.trim()) next.email = 'Введите email';
+          else if (!validateEmail(email.trim())) next.email = 'Некорректный email';
+          else next.email = undefined;
+          break;
+        case 'password':
+          if (!password) next.password = 'Введите пароль';
+          else next.password = undefined;
+          break;
+      }
+      return next;
+    });
+  }, [email, password]);
+
+  const handleFieldChange = useCallback((field: keyof FieldErrors, value: string, setter: (v: string) => void) => {
+    setter(value);
+    if (touched[field]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  }, [touched]);
+
+  const validate = (): boolean => {
+    const next: FieldErrors = {};
+
+    if (!email.trim()) next.email = 'Введите email';
+    else if (!validateEmail(email.trim())) next.email = 'Некорректный email';
+
+    if (!password) next.password = 'Введите пароль';
+
+    setErrors(next);
+    setTouched({ email: true, password: true });
+    return !Object.values(next).some(Boolean);
+  };
 
   const mutation = useMutation({
-    mutationFn: () => login(email, password),
+    mutationFn: () => login(email.trim(), password),
   });
 
   const handleLogin = () => {
-    if (!email.trim() || !password.trim()) return;
+    if (!validate()) return;
+    mutation.reset();
     mutation.mutate();
   };
 
@@ -45,56 +97,66 @@ export default function LoginScreen() {
       >
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>
-            Welcome back
+            Вход в аккаунт
           </Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-            Sign in to your account
+            Войдите, чтобы продолжить
           </Text>
         </View>
+
+        {/* Server Error */}
+        {mutation.error && (
+          <View style={[styles.serverError, { backgroundColor: colors.destructive + '12', borderColor: colors.destructive + '30' }]}>
+            <Text style={[styles.serverErrorTitle, { color: colors.destructive }]}>
+              Ошибка входа
+            </Text>
+            <Text style={[styles.serverErrorText, { color: colors.destructive }]}>
+              {mutation.error.message}
+            </Text>
+          </View>
+        )}
 
         <Card style={styles.card}>
           <Input
             label="Email"
             placeholder="you@example.com"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(v) => handleFieldChange('email', v, setEmail)}
+            onBlur={() => handleBlur('email')}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
             containerStyle={styles.field}
+            error={errors.email}
           />
 
           <Input
-            label="Password"
-            placeholder="Your password"
+            label="Пароль"
+            placeholder="Ваш пароль"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(v) => handleFieldChange('password', v, setPassword)}
+            onBlur={() => handleBlur('password')}
             secureTextEntry
             containerStyle={styles.field}
+            error={errors.password}
           />
-
-          {mutation.error && (
-            <Text style={[styles.errorText, { color: colors.destructive }]}>
-              {mutation.error.message}
-            </Text>
-          )}
 
           <Button
             onPress={handleLogin}
             loading={mutation.isPending}
             style={styles.button}
           >
-            Sign In
+            Войти
           </Button>
         </Card>
 
         <View style={styles.footer}>
           <Text style={{ color: colors.mutedForeground }}>
-            Don&apos;t have an account?{' '}
+            Нет аккаунта?{' '}
           </Text>
           <Link href="/(auth)/register">
             <Text style={{ color: colors.primary, fontWeight: '600' }}>
-              Sign Up
+              Регистрация
             </Text>
           </Link>
         </View>
@@ -113,7 +175,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   header: {
-    marginBottom: 32,
+    marginBottom: 20,
   },
   title: {
     fontSize: 28,
@@ -123,15 +185,26 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
   },
+  serverError: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 16,
+  },
+  serverErrorTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  serverErrorText: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
   card: {
     gap: 0,
   },
   field: {
     marginBottom: 16,
-  },
-  errorText: {
-    fontSize: 14,
-    marginBottom: 12,
   },
   button: {
     marginTop: 8,
