@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -38,8 +39,9 @@ function getInitials(name?: string, firstName?: string, lastName?: string) {
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const { isAccessibilityMode, toggleAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
-  const colors = Colors[theme];
+  const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
 
   const roleColor = ROLE_COLORS[user?.role ?? ''] ?? colors.primary;
@@ -105,6 +107,26 @@ export default function ProfileScreen() {
               </View>
             </View>
           ))}
+        </Card>
+
+        {/* Accessibility Mode */}
+        <Card style={styles.accessibilityCard}>
+          <View style={styles.accessibilityHeader}>
+            <View style={styles.accessibilityInfo}>
+              <ThemedText style={styles.accessibilityTitle}>
+                Версия для слабовидящих
+              </ThemedText>
+              <ThemedText style={[styles.accessibilityDesc, { color: colors.mutedForeground }]}>
+                Увеличенный шрифт и высокий контраст
+              </ThemedText>
+            </View>
+            <Switch
+              value={isAccessibilityMode}
+              onValueChange={toggleAccessibilityMode}
+              trackColor={{ false: colors.muted, true: colors.primary + '40' }}
+              thumbColor={isAccessibilityMode ? colors.primary : '#f4f3f4'}
+            />
+          </View>
         </Card>
 
         {/* Account Status */}
@@ -234,5 +256,26 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     marginTop: 16,
+  },
+  accessibilityCard: {
+    marginBottom: 14,
+  },
+  accessibilityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  accessibilityInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  accessibilityTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  accessibilityDesc: {
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

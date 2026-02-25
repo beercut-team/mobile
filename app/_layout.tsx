@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ToastProvider } from '@/contexts/toast-context';
+import { AccessibilityProvider, useAccessibility } from '@/contexts/accessibility-context';
 import { queryClient } from '@/lib/query-client';
 import { Colors } from '@/constants/theme';
 
@@ -31,13 +32,14 @@ function useProtectedRoute() {
 }
 
 function RootNavigator() {
-  const { isLoading } = useAuth();
+  const { isLoading: authLoading } = useAuth();
+  const { isLoading: accessibilityLoading, isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
-  const colors = Colors[theme];
+  const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
 
   useProtectedRoute();
 
-  if (isLoading) {
+  if (authLoading || accessibilityLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -58,14 +60,16 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <ToastProvider>
-            <RootNavigator />
-          </ToastProvider>
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </AuthProvider>
+      <AccessibilityProvider>
+        <AuthProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <ToastProvider>
+              <RootNavigator />
+            </ToastProvider>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </AuthProvider>
+      </AccessibilityProvider>
     </QueryClientProvider>
   );
 }

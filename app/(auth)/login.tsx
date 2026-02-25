@@ -7,10 +7,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 
 import { useAuth } from '@/contexts/auth-context';
+import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { Button } from '@/components/ui/button';
@@ -28,11 +29,14 @@ function validateEmail(email: string): boolean {
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const router = useRouter();
+  const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
-  const colors = Colors[theme];
+  const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -118,7 +122,7 @@ export default function LoginScreen() {
 
         <Card style={styles.card}>
           <Input
-            label="Email"
+            label="Электронная почта"
             placeholder="you@example.com"
             value={email}
             onChangeText={(v) => handleFieldChange('email', v, setEmail)}
@@ -137,6 +141,7 @@ export default function LoginScreen() {
             onChangeText={(v) => handleFieldChange('password', v, setPassword)}
             onBlur={() => handleBlur('password')}
             secureTextEntry
+            showPasswordToggle
             containerStyle={styles.field}
             error={errors.password}
           />

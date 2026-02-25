@@ -19,7 +19,18 @@ No test framework is configured yet.
 
 ## Architecture
 
-**Routing:** Expo Router file-based routing in `/app`. Tab navigation via `/(tabs)` route group with bottom tabs. Modal screens use `presentation: 'modal'` in the Stack navigator.
+**Domain:** Medical patient management system with role-based access (DISTRICT_DOCTOR, SURGEON, PATIENT, ADMIN). Manages patient records, surgery scheduling, and notifications.
+
+**Routing:** Expo Router file-based routing in `/app`. Two route groups: `/(auth)` for login/register, `/(tabs)` for main app with bottom tabs. Protected routes via `useProtectedRoute` hook in root layout auto-redirects based on auth state.
+
+**Authentication:** JWT-based auth with refresh tokens. Tokens stored in SecureStore (iOS/Android) or localStorage (web) via `/lib/token-storage.ts`. API client (`/lib/api.ts`) handles automatic token refresh on 401 responses. Auth state managed via `AuthProvider` context in `/contexts/auth-context.tsx`.
+
+**State Management:**
+- Server state: React Query (@tanstack/react-query) with 5min stale time, configured in `/lib/query-client.ts`
+- Auth state: React Context (`AuthProvider`)
+- Toast notifications: Custom context (`ToastProvider`) with Reanimated animations
+
+**API Layer:** Centralized in `/lib/api.ts` with `apiFetch()` helper. Domain modules in `/lib` (auth, patients, notifications, districts, surgeries) encapsulate API calls and TypeScript types. Base URL: `https://api.beercut.tech`
 
 **Theming:** Light/dark mode via `useColorScheme()` hook. Colors defined in `/constants/theme.ts`. Theme-aware components (`ThemedText`, `ThemedView`) accept optional `lightColor`/`darkColor` props.
 
@@ -33,3 +44,5 @@ No test framework is configured yet.
 - ESLint uses `eslint-config-expo` flat config
 - Typed routes enabled (`experiments.typedRoutes` in app.json)
 - React Native Reanimated for animations
+- Role-based UI: Use `hasRole()` from `useAuth()` to conditionally render features
+- Tab visibility controlled via `href: null` in tab options based on user role

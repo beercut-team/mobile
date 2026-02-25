@@ -94,8 +94,7 @@ export async function loginUser(data: LoginRequest): Promise<AuthResponse> {
 }
 
 export async function getMe(): Promise<UserResponse> {
-  const res = await apiFetch<ApiResponse<UserResponse>>('/api/v1/auth/me');
-  return res.data;
+  return apiFetch<UserResponse>('/api/v1/auth/me');
 }
 
 export async function logoutUser(): Promise<MessageResponse> {

@@ -14,6 +14,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Card } from '@/components/ui/card';
 import { Colors } from '@/constants/theme';
+import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   getPatients,
@@ -37,8 +38,9 @@ const STATUS_FILTERS: (PatientStatus | 'ALL')[] = [
 ];
 
 export default function PatientsScreen() {
+  const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
-  const colors = Colors[theme];
+  const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
 
   const [search, setSearch] = useState('');

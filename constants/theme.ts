@@ -45,6 +45,25 @@ export const Colors = {
     primary: '#FFFFFF',
     primaryForeground: '#151718',
   },
+  // High contrast theme for accessibility
+  highContrast: {
+    text: '#000000',
+    background: '#FFFFFF',
+    tint: '#0066CC',
+    icon: '#000000',
+    tabIconDefault: '#000000',
+    tabIconSelected: '#0066CC',
+    border: '#000000',
+    muted: '#F0F0F0',
+    mutedForeground: '#000000',
+    destructive: '#CC0000',
+    ring: '#0066CC',
+    inputBackground: '#FFFFFF',
+    card: '#FFFFFF',
+    cardForeground: '#000000',
+    primary: '#0066CC',
+    primaryForeground: '#FFFFFF',
+  },
 };
 
 export const Fonts = Platform.select({
@@ -71,3 +90,6 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+// Font size multiplier for accessibility mode
+export const AccessibilityFontScale = 1.3;

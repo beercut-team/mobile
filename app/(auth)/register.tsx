@@ -12,6 +12,7 @@ import { Link, useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 
 import { useAuth } from '@/contexts/auth-context';
+import { useAccessibility } from '@/contexts/accessibility-context';
 import { useToast } from '@/contexts/toast-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
@@ -32,6 +33,7 @@ interface FieldErrors {
   email?: string;
   phone?: string;
   password?: string;
+  confirmPassword?: string;
 }
 
 function validateEmail(email: string): boolean {
@@ -42,12 +44,14 @@ export default function RegisterScreen() {
   const { register } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
+  const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
-  const colors = Colors[theme];
+  const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<UserRole>('PATIENT');
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -85,10 +89,15 @@ export default function RegisterScreen() {
           else if (password.length < 6) next.password = 'Минимум 6 символов';
           else next.password = undefined;
           break;
+        case 'confirmPassword':
+          if (!confirmPassword) next.confirmPassword = 'Подтвердите пароль';
+          else if (confirmPassword !== password) next.confirmPassword = 'Пароли не совпадают';
+          else next.confirmPassword = undefined;
+          break;
       }
       return next;
     });
-  }, [name, email, phone, password]);
+  }, [name, email, phone, password, confirmPassword]);
 
   const handleFieldChange = useCallback((field: keyof FieldErrors, value: string, setter: (v: string) => void) => {
     setter(value);
@@ -111,8 +120,11 @@ export default function RegisterScreen() {
     if (!password) next.password = 'Введите пароль';
     else if (password.length < 6) next.password = 'Минимум 6 символов';
 
+    if (!confirmPassword) next.confirmPassword = 'Подтвердите пароль';
+    else if (confirmPassword !== password) next.confirmPassword = 'Пароли не совпадают';
+
     setErrors(next);
-    setTouched({ name: true, email: true, password: true, phone: true });
+    setTouched({ name: true, email: true, password: true, confirmPassword: true, phone: true });
     return !Object.values(next).some(Boolean);
   };
 
@@ -129,7 +141,6 @@ export default function RegisterScreen() {
     },
     onSuccess: () => {
       showToast('Вы успешно зарегистрировались!', 'success');
-      router.replace('/(tabs)/profile');
     },
   });
 
@@ -219,7 +230,7 @@ export default function RegisterScreen() {
           />
 
           <Input
-            label="Email"
+            label="Электронная почта"
             placeholder="you@example.com"
             value={email}
             onChangeText={(v) => handleFieldChange('email', v, setEmail)}
@@ -249,8 +260,21 @@ export default function RegisterScreen() {
             onChangeText={(v) => handleFieldChange('password', v, setPassword)}
             onBlur={() => handleBlur('password')}
             secureTextEntry
+            showPasswordToggle
             containerStyle={styles.field}
             error={errors.password}
+          />
+
+          <Input
+            label="Подтверждение пароля"
+            placeholder="Повторите пароль"
+            value={confirmPassword}
+            onChangeText={(v) => handleFieldChange('confirmPassword', v, setConfirmPassword)}
+            onBlur={() => handleBlur('confirmPassword')}
+            secureTextEntry
+            showPasswordToggle
+            containerStyle={styles.field}
+            error={errors.confirmPassword}
           />
 
           <Button

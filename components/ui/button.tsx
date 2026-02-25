@@ -10,6 +10,8 @@ import {
 
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAccessibility } from '@/contexts/accessibility-context';
+import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
 
 type ButtonVariant = 'default' | 'outline' | 'ghost' | 'destructive';
 
@@ -29,7 +31,10 @@ export function Button({
   ...props
 }: ButtonProps) {
   const theme = useColorScheme() ?? 'light';
-  const colors = Colors[theme];
+  const { isAccessibilityMode } = useAccessibility();
+  const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
+  const fontSize = useAccessibilityFontSize(16);
+  const buttonHeight = useAccessibilityFontSize(48);
 
   const variantStyles: Record<ButtonVariant, ViewStyle> = {
     default: {
@@ -62,6 +67,7 @@ export function Button({
       disabled={isDisabled}
       style={({ pressed }) => [
         styles.base,
+        { height: buttonHeight },
         variantStyles[variant],
         pressed && styles.pressed,
         isDisabled && styles.disabled,
@@ -72,7 +78,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator size="small" color={textColors[variant]} />
       ) : (
-        <Text style={[styles.text, { color: textColors[variant] }]}>
+        <Text style={[styles.text, { color: textColors[variant], fontSize }]}>
           {children}
         </Text>
       )}
@@ -82,14 +88,12 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    height: 48,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
   text: {
-    fontSize: 16,
     fontWeight: '600',
   },
   pressed: {

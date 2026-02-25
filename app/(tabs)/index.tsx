@@ -6,6 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Card } from '@/components/ui/card';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getDashboard, STATUS_LABELS, STATUS_COLORS, type PatientStatus } from '@/lib/patients';
 import { getUnreadCount } from '@/lib/notifications';
@@ -19,8 +20,9 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function HomeScreen() {
   const { user, hasRole } = useAuth();
+  const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
-  const colors = Colors[theme];
+  const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
 
   const showDashboard = hasRole('DISTRICT_DOCTOR', 'SURGEON', 'ADMIN');

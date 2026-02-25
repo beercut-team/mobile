@@ -16,6 +16,18 @@ export interface Surgery {
   updated_at: string;
 }
 
+export interface CreateSurgeryRequest {
+  patient_id: number;
+  scheduled_date: string;
+  notes?: string;
+}
+
+export interface UpdateSurgeryRequest {
+  scheduled_date?: string;
+  status?: SurgeryStatus;
+  notes?: string;
+}
+
 export async function getSurgeries(
   page = 1,
   limit = 20,
@@ -27,6 +39,20 @@ export async function getSurgeries(
 
 export async function getSurgery(id: number): Promise<ApiResponse<Surgery>> {
   return apiFetch<ApiResponse<Surgery>>(`/api/v1/surgeries/${id}`);
+}
+
+export async function createSurgery(data: CreateSurgeryRequest): Promise<ApiResponse<Surgery>> {
+  return apiFetch<ApiResponse<Surgery>>('/api/v1/surgeries', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSurgery(id: number, data: UpdateSurgeryRequest): Promise<ApiResponse<Surgery>> {
+  return apiFetch<ApiResponse<Surgery>>(`/api/v1/surgeries/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
 }
 
 export const SURGERY_STATUS_LABELS: Record<SurgeryStatus, string> = {
