@@ -91,11 +91,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 16,
+    gap: 12,
     marginBottom: 16,
   },
   nameContainer: {
     flex: 1,
+    minWidth: 0,
   },
   name: {
     fontWeight: '700',

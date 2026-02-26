@@ -180,8 +180,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 12,
+    gap: 12,
   },
-  title: {},
+  title: {
+    flex: 1,
+  },
   markAllBtn: {},
   list: {
     padding: 20,

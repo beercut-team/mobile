@@ -210,12 +210,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 6,
+    gap: 8,
   },
   commentAuthor: {
     fontWeight: '600',
+    flex: 1,
   },
   commentDate: {
     fontWeight: '400',
+    flexShrink: 0,
   },
   commentBody: {
     lineHeight: 20,

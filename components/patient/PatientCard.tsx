@@ -100,6 +100,7 @@ const styles = StyleSheet.create({
   },
   nameContainer: {
     flex: 1,
+    minWidth: 0,
   },
   name: {
     fontWeight: '600',

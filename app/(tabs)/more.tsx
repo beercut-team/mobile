@@ -200,13 +200,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
     flex: 1,
+    minWidth: 0,
   },
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   menuItemTitle: {
     fontWeight: '600',
+    flex: 1,
   },
   menuItemRight: {
     flexDirection: 'row',

@@ -126,19 +126,25 @@ export default function HomeScreen() {
                 return (
                   <Card key={status} style={styles.statCard}>
                     <View style={styles.statHeader}>
-                      <StatusBadge
-                        status={STATUS_LABELS[status]}
-                        percentage={readiness}
-                        size="sm"
-                      />
-                      <ThemedText style={[styles.readinessText, { color: colors.mutedForeground, fontSize: statLabelSize }]}>
-                        {readiness}%
+                      <View style={styles.statBadgeWrap}>
+                        <StatusBadge
+                          status={STATUS_LABELS[status]}
+                          percentage={readiness}
+                          size="sm"
+                        />
+                      </View>
+                      <View style={[styles.readinessWrap, { backgroundColor: colors.card }]}>
+                        <ThemedText style={[styles.readinessText, { color: colors.mutedForeground, fontSize: statLabelSize }]}>
+                          {readiness}%
+                        </ThemedText>
+                      </View>
+                    </View>
+                    <View style={styles.statBody}>
+                      <ThemedText style={[styles.statCount, { fontSize: statCountSize }]}>{count}</ThemedText>
+                      <ThemedText style={[styles.statLabel, { color: colors.mutedForeground, fontSize: statLabelSize }]}>
+                        {count === 1 ? 'пациент' : count < 5 ? 'пациента' : 'пациентов'}
                       </ThemedText>
                     </View>
-                    <ThemedText style={[styles.statCount, { fontSize: statCountSize }]}>{count}</ThemedText>
-                    <ThemedText style={[styles.statLabel, { color: colors.mutedForeground, fontSize: statLabelSize }]}>
-                      {count === 1 ? 'пациент' : count < 5 ? 'пациента' : 'пациентов'}
-                    </ThemedText>
                   </Card>
                 );
               })}
@@ -240,17 +246,42 @@ const styles = StyleSheet.create({
     width: '47%' as any,
     flexGrow: 1,
     padding: 16,
-    alignItems: 'flex-start',
-    gap: 8,
+    minHeight: 120,
+    justifyContent: 'space-between',
   },
   statHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
+    gap: 10,
+  },
+  statBadgeWrap: {
+    flex: 1,
+    maxWidth: '72%',
+    minWidth: 0,
+    paddingRight: 2,
+    zIndex: 1,
+    overflow: 'hidden',
+  },
+  statBody: {
+    marginTop: 16,
+    gap: 4,
+  },
+  readinessWrap: {
+    width: 52,
+    minWidth: 52,
+    marginLeft: 8,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    borderRadius: 8,
+    paddingLeft: 4,
+    zIndex: 2,
   },
   readinessText: {
     fontWeight: '600',
+    flexShrink: 0,
+    textAlign: 'right',
   },
   statCount: {
     fontWeight: '700',

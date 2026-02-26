@@ -124,6 +124,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+    gap: 8,
   },
   title: {
     fontWeight: '700',
@@ -132,6 +133,7 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
     marginLeft: 8,
+    flexShrink: 0,
   },
   body: {
     // Content goes here

@@ -2,8 +2,16 @@ import type {
   BottomTabBarProps,
   BottomTabNavigationOptions,
 } from '@react-navigation/bottom-tabs';
+import { BlurView, type BlurTint } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -13,14 +21,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
 import { useAccessibility } from '@/contexts/accessibility-context';
+import { useAuth } from '@/contexts/auth-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 type TabBarOptions = BottomTabNavigationOptions & { href?: unknown };
 
-function isRouteVisible(options: TabBarOptions): boolean {
-  return options.href !== null;
-}
+const IOS_TINT: Record<'light' | 'dark', BlurTint> = {
+  light: 'systemChromeMaterialLight',
+  dark: 'systemChromeMaterialDark',
+};
 
 function getTabLabel(options: TabBarOptions, routeName: string): string {
   if (typeof options.tabBarLabel === 'string') return options.tabBarLabel;
@@ -56,13 +66,25 @@ export function FloatingTabBar({
 }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const theme = useColorScheme() ?? 'light';
+  const isDark = theme === 'dark';
+  const isIOS = Platform.OS === 'ios';
+
   const { isAccessibilityMode } = useAccessibility();
+  const { hasRole } = useAuth();
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
 
-  const visibleRoutes = state.routes.filter((route) => {
-    const options = descriptors[route.key]?.options as TabBarOptions;
-    return isRouteVisible(options);
-  });
+  const canViewPatients = hasRole('DISTRICT_DOCTOR', 'SURGEON', 'ADMIN');
+  const canModerate = hasRole('SURGEON', 'ADMIN');
+
+  const visibleTabNames = canModerate
+    ? ['index', 'patients', 'moderation', 'more']
+    : canViewPatients
+      ? ['index', 'patients', 'notifications', 'more']
+      : ['index', 'notifications', 'profile', 'more'];
+
+  const visibleRoutes = visibleTabNames
+    .map((name) => state.routes.find((route) => route.name === name))
+    .filter((route): route is (typeof state.routes)[number] => route != null);
 
   if (!visibleRoutes.length) return null;
 
@@ -74,6 +96,19 @@ export function FloatingTabBar({
     visibleRoutes[0].name,
   );
 
+  const blurTint: BlurTint = isAccessibilityMode
+    ? theme
+    : isIOS
+      ? IOS_TINT[theme]
+      : theme;
+
+  const blurIntensity = isAccessibilityMode ? 0 : isIOS ? 90 : 95;
+  const borderColor = isAccessibilityMode
+    ? colors.border
+    : isDark
+      ? 'rgba(255,255,255,0.2)'
+      : 'rgba(255,255,255,0.75)';
+
   return (
     <View
       style={[
@@ -84,56 +119,62 @@ export function FloatingTabBar({
       ]}
       pointerEvents="box-none"
     >
-      <View
+      <BlurView
+        tint={blurTint}
+        intensity={blurIntensity}
         style={[
           styles.tabBar,
           {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
+            backgroundColor: isAccessibilityMode ? colors.card : 'rgba(255,255,255,0.02)',
+            borderColor,
           },
         ]}
       >
-        {visibleRoutes.map((route) => {
-          const options = descriptors[route.key]?.options as TabBarOptions;
-          const isFocused = route.name === activeRouteName;
-          const label = getTabLabel(options, route.name);
+        <View style={styles.tabsRow}>
+          {visibleRoutes.map((route) => {
+            const options = descriptors[route.key]?.options as TabBarOptions;
+            const isFocused = route.name === activeRouteName;
+            const label = getTabLabel(options, route.name);
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
+            const onPress = () => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
 
-            if (!isFocused && !event.defaultPrevented) {
-              if (Platform.OS === 'ios') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              if (!isFocused && !event.defaultPrevented) {
+                if (Platform.OS === 'ios') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                navigation.navigate(route.name, route.params);
               }
-              navigation.navigate(route.name, route.params);
-            }
-          };
+            };
 
-          const onLongPress = () => {
-            navigation.emit({
-              type: 'tabLongPress',
-              target: route.key,
-            });
-          };
+            const onLongPress = () => {
+              navigation.emit({
+                type: 'tabLongPress',
+                target: route.key,
+              });
+            };
 
-          return (
-            <TabButton
-              key={route.key}
-              label={label}
-              isFocused={isFocused}
-              onPress={onPress}
-              onLongPress={onLongPress}
-              renderIcon={options.tabBarIcon}
-              testID={options.tabBarButtonTestID}
-              colors={colors}
-            />
-          );
-        })}
-      </View>
+            return (
+              <TabButton
+                key={route.key}
+                label={label}
+                isFocused={isFocused}
+                onPress={onPress}
+                onLongPress={onLongPress}
+                renderIcon={options.tabBarIcon}
+                testID={options.tabBarButtonTestID}
+                colors={colors}
+                theme={theme}
+                isAccessibilityMode={isAccessibilityMode}
+              />
+            );
+          })}
+        </View>
+      </BlurView>
     </View>
   );
 }
@@ -146,6 +187,8 @@ interface TabButtonProps {
   renderIcon?: TabBarOptions['tabBarIcon'];
   testID?: string;
   colors: (typeof Colors)['light'];
+  theme: 'light' | 'dark';
+  isAccessibilityMode: boolean;
 }
 
 function TabButton({
@@ -156,22 +199,58 @@ function TabButton({
   renderIcon,
   testID,
   colors,
+  theme,
+  isAccessibilityMode,
 }: TabButtonProps) {
   const scale = useSharedValue(1);
+  const isDark = theme === 'dark';
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.9, { damping: 15, stiffness: 400 });
+    scale.value = withSpring(0.94, { damping: 16, stiffness: 420 });
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+    scale.value = withSpring(1, { damping: 16, stiffness: 420 });
   };
 
   const color = isFocused ? colors.primary : colors.mutedForeground;
+
+  const activeCapsuleStyle: ViewStyle | undefined = isFocused
+    ? {
+        backgroundColor: isAccessibilityMode
+          ? colors.primary + '20'
+          : isDark
+            ? 'rgba(10,132,255,0.3)'
+            : 'rgba(10,132,255,0.13)',
+        borderColor: isAccessibilityMode
+          ? colors.primary
+          : isDark
+            ? 'rgba(170,210,255,0.38)'
+            : 'rgba(190,220,255,0.9)',
+        borderWidth: isAccessibilityMode ? 1 : 0.7,
+        ...Platform.select({
+          ios: {
+            shadowColor: '#0A84FF',
+            shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: isDark ? 0.2 : 0.14,
+            shadowRadius: 8,
+          },
+          android: {
+            elevation: 2,
+          },
+          web: {
+            shadowColor: '#0A84FF',
+            shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: isDark ? 0.2 : 0.14,
+            shadowRadius: 8,
+          },
+        }),
+      }
+    : undefined;
 
   return (
     <AnimatedPressable
@@ -185,14 +264,7 @@ function TabButton({
       accessibilityLabel={label}
       testID={testID}
     >
-      <View
-        style={[
-          styles.tabInner,
-          {
-            backgroundColor: isFocused ? colors.primary + '15' : 'transparent',
-          },
-        ]}
-      >
+      <View style={[styles.tabInner, activeCapsuleStyle]}>
         {renderIcon?.({ color, size: 20, focused: isFocused })}
         <Text
           style={[
@@ -223,29 +295,33 @@ const styles = StyleSheet.create({
   tabBar: {
     width: '100%',
     maxWidth: 560,
-    flexDirection: 'row',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-    borderWidth: 1,
-    gap: 4,
+    overflow: 'hidden',
+    borderRadius: 24,
+    paddingVertical: 7,
+    paddingHorizontal: 7,
+    borderWidth: 0.5,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.12,
-        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.16,
+        shadowRadius: 24,
       },
       android: {
         elevation: 8,
       },
       web: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.12,
-        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.16,
+        shadowRadius: 24,
+        backdropFilter: 'blur(20px) saturate(180%)',
       },
     }),
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    gap: 4,
   },
   tab: {
     flex: 1,
@@ -257,11 +333,12 @@ const styles = StyleSheet.create({
     minHeight: 54,
     paddingVertical: 7,
     paddingHorizontal: 8,
-    borderRadius: 14,
+    borderRadius: 17,
     gap: 4,
   },
   label: {
     fontSize: 11,
     textAlign: 'center',
+    letterSpacing: -0.1,
   },
 });

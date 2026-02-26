@@ -74,6 +74,8 @@ export function StatusBadge({ status, percentage, size = 'md' }: StatusBadgeProp
       accessibilityLabel={`${status}, ${percentage} процентов`}
     >
       <Text
+        numberOfLines={1}
+        ellipsizeMode="tail"
         style={[
           styles.text,
           {
@@ -91,8 +93,13 @@ export function StatusBadge({ status, percentage, size = 'md' }: StatusBadgeProp
 const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
+    minWidth: 0,
+    maxWidth: '100%',
+    overflow: 'hidden',
   },
   text: {
     fontWeight: '600',
+    minWidth: 0,
+    flexShrink: 1,
   },
 });

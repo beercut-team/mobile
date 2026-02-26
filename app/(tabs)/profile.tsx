@@ -221,12 +221,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
+    gap: 12,
   },
-  infoLabel: {},
+  infoLabel: {
+    flex: 1,
+  },
   infoValue: {
     fontWeight: '500',
     maxWidth: '55%',
     textAlign: 'right',
+    flexShrink: 0,
   } as any,
   divider: {
     height: StyleSheet.hairlineWidth,

@@ -131,6 +131,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: '600',
+    flex: 1,
+    marginRight: 8,
   },
   content: {
     gap: 0,

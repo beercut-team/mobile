@@ -12,6 +12,8 @@ import { ToastProvider } from '@/contexts/toast-context';
 import { AccessibilityProvider, useAccessibility } from '@/contexts/accessibility-context';
 import { queryClient } from '@/lib/query-client';
 import { Colors } from '@/constants/theme';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
 
 function useProtectedRoute() {
   const { user, isLoading } = useAuth();
@@ -38,6 +40,7 @@ function RootNavigator() {
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
 
   useProtectedRoute();
+  usePushNotifications();
 
   if (authLoading || accessibilityLoading) {
     return (
@@ -48,10 +51,13 @@ function RootNavigator() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(tabs)" />
-    </Stack>
+    <>
+      <OfflineIndicator />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    </>
   );
 }
 

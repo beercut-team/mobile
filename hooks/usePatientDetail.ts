@@ -2,10 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getPatient, updatePatient, changePatientStatus } from '@/lib/patients';
 import type { UpdatePatientRequest, PatientStatus } from '@/lib/patients';
 import { useToast } from '@/contexts/toast-context';
+import { addToQueue } from '@/lib/offline-queue';
+import { useOfflineSync } from './useOfflineSync';
+import { ApiError } from '@/lib/api';
 
 export function usePatientDetail(patientId: number) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { isOnline, updatePendingCount } = useOfflineSync();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['patients', patientId],
@@ -18,8 +22,31 @@ export function usePatientDetail(patientId: number) {
 
   const updateMutation = useMutation({
     mutationFn: async (data: UpdatePatientRequest) => {
-      const response = await updatePatient(patientId, data);
-      return response.data;
+      try {
+        const response = await updatePatient(patientId, data);
+        return response.data;
+      } catch (error) {
+        if (!isOnline || (error instanceof ApiError && error.status >= 500)) {
+          // Queue for offline sync
+          await addToQueue({
+            entity: 'patient',
+            entity_id: patientId,
+            action: 'UPDATE',
+            payload: data,
+            client_time: new Date().toISOString(),
+          });
+          await updatePendingCount();
+
+          // Optimistic update
+          queryClient.setQueryData(['patients', patientId], (old: any) => ({
+            ...old,
+            ...data,
+          }));
+
+          throw new Error('offline');
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients', patientId] });
@@ -27,13 +54,40 @@ export function usePatientDetail(patientId: number) {
       showToast('Данные пациента обновлены', 'success');
     },
     onError: (error: Error) => {
-      showToast(error.message || 'Ошибка обновления данных', 'error');
+      if (error.message === 'offline') {
+        showToast('Изменения сохранены для синхронизации', 'success');
+      } else {
+        showToast(error.message || 'Ошибка обновления данных', 'error');
+      }
     },
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ status, comment }: { status: PatientStatus; comment?: string }) => {
-      await changePatientStatus(patientId, status, comment);
+      try {
+        await changePatientStatus(patientId, status, comment);
+      } catch (error) {
+        if (!isOnline || (error instanceof ApiError && error.status >= 500)) {
+          // Queue for offline sync
+          await addToQueue({
+            entity: 'patient_status',
+            entity_id: patientId,
+            action: 'UPDATE',
+            payload: { status, comment },
+            client_time: new Date().toISOString(),
+          });
+          await updatePendingCount();
+
+          // Optimistic update
+          queryClient.setQueryData(['patients', patientId], (old: any) => ({
+            ...old,
+            status,
+          }));
+
+          throw new Error('offline');
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients', patientId] });
@@ -41,7 +95,11 @@ export function usePatientDetail(patientId: number) {
       showToast('Статус пациента изменён', 'success');
     },
     onError: (error: Error) => {
-      showToast(error.message || 'Ошибка изменения статуса', 'error');
+      if (error.message === 'offline') {
+        showToast('Изменения сохранены для синхронизации', 'success');
+      } else {
+        showToast(error.message || 'Ошибка изменения статуса', 'error');
+      }
     },
   });
 
