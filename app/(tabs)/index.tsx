@@ -128,52 +128,57 @@ export default function HomeScreen() {
         )}
 
         {/* Dashboard Stats */}
-        {showDashboard && stats && (
-          <View style={styles.section}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              Статистика пациентов
-            </ThemedText>
-            <View style={styles.statsGrid}>
-              {(Object.entries(stats) as [PatientStatus, number][]).map(([status, count]) => {
-                if (!STATUS_LABELS[status]) return null;
-                const readiness = STATUS_READINESS[status];
-                return (
-                  <Card key={status} style={styles.statCard}>
-                    <View style={styles.statHeader}>
-                      <View style={styles.statBadgeWrap}>
-                        <StatusBadge
-                          status={STATUS_LABELS[status]}
-                          percentage={readiness}
-                          size="sm"
-                          multiline
-                        />
+        {showDashboard && stats && (() => {
+          const totalPatients = Object.values(stats).reduce((sum, count) => sum + (typeof count === 'number' ? count : 0), 0);
+          if (totalPatients === 0) return null;
+
+          return (
+            <View style={styles.section}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                Статистика пациентов
+              </ThemedText>
+              <View style={styles.statsGrid}>
+                {(Object.entries(stats) as [PatientStatus, number][]).map(([status, count]) => {
+                  if (!STATUS_LABELS[status]) return null;
+                  const readiness = STATUS_READINESS[status];
+                  return (
+                    <Card key={status} style={styles.statCard}>
+                      <View style={styles.statHeader}>
+                        <View style={styles.statBadgeWrap}>
+                          <StatusBadge
+                            status={STATUS_LABELS[status]}
+                            percentage={readiness}
+                            size="sm"
+                            multiline
+                          />
+                        </View>
+                        <View style={styles.readinessWrap}>
+                          <ThemedText numberOfLines={1} style={[styles.readinessText, { color: colors.mutedForeground, fontSize: statLabelSize }]}>
+                            {readiness}%
+                          </ThemedText>
+                        </View>
                       </View>
-                      <View style={styles.readinessWrap}>
-                        <ThemedText numberOfLines={1} style={[styles.readinessText, { color: colors.mutedForeground, fontSize: statLabelSize }]}>
-                          {readiness}%
+                      <View style={styles.statBody}>
+                        <ThemedText
+                          numberOfLines={1}
+                          style={[styles.statCount, { fontSize: statCountSize, lineHeight: statCountLineHeight }]}
+                        >
+                          {count}
+                        </ThemedText>
+                        <ThemedText
+                          numberOfLines={1}
+                          style={[styles.statLabel, { color: colors.mutedForeground, fontSize: statLabelSize, lineHeight: statLabelLineHeight }]}
+                        >
+                          {count === 1 ? 'пациент' : count < 5 ? 'пациента' : 'пациентов'}
                         </ThemedText>
                       </View>
-                    </View>
-                    <View style={styles.statBody}>
-                      <ThemedText
-                        numberOfLines={1}
-                        style={[styles.statCount, { fontSize: statCountSize, lineHeight: statCountLineHeight }]}
-                      >
-                        {count}
-                      </ThemedText>
-                      <ThemedText
-                        numberOfLines={1}
-                        style={[styles.statLabel, { color: colors.mutedForeground, fontSize: statLabelSize, lineHeight: statLabelLineHeight }]}
-                      >
-                        {count === 1 ? 'пациент' : count < 5 ? 'пациента' : 'пациентов'}
-                      </ThemedText>
-                    </View>
-                  </Card>
-                );
-              })}
+                    </Card>
+                  );
+                })}
+              </View>
             </View>
-          </View>
-        )}
+          );
+        })()}
 
         {/* Patient Medical Data */}
         {isPatient && (
