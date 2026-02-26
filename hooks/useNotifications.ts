@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getNotifications,
@@ -6,6 +7,7 @@ import {
   markAllAsRead,
   type Notification,
 } from '@/lib/notifications';
+import { useAuth } from '@/contexts/auth-context';
 
 /**
  * Hook for managing notifications with React Query
@@ -14,6 +16,8 @@ import {
  */
 export function useNotifications(page = 1, limit = 20) {
   const queryClient = useQueryClient();
+  const { user, hasRole } = useAuth();
+  const isPatient = hasRole('PATIENT');
 
   // Query for notifications list
   const {
@@ -52,9 +56,29 @@ export function useNotifications(page = 1, limit = 20) {
     },
   });
 
+  // Filter notifications for patients - only show notifications where entity_id matches their user_id
+  const filteredNotifications = useMemo(() => {
+    const allNotifications = notificationsData?.data ?? [];
+    if (!isPatient || !user?.id) {
+      return allNotifications;
+    }
+    // For patients, only show notifications where entity_id matches their user_id
+    return allNotifications.filter(n => n.entity_id === user.id);
+  }, [notificationsData?.data, isPatient, user?.id]);
+
+  // Filter unread count for patients
+  const filteredUnreadCount = useMemo(() => {
+    if (!isPatient || !user?.id) {
+      return unreadCount ?? 0;
+    }
+    // For patients, count only unread notifications where entity_id matches their user_id
+    const allNotifications = notificationsData?.data ?? [];
+    return allNotifications.filter(n => !n.is_read && n.entity_id === user.id).length;
+  }, [notificationsData?.data, isPatient, user?.id, unreadCount]);
+
   return {
-    notifications: notificationsData?.data ?? [],
-    unreadCount: unreadCount ?? 0,
+    notifications: filteredNotifications,
+    unreadCount: filteredUnreadCount,
     isLoading,
     error,
     refetch,

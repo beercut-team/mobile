@@ -15,7 +15,7 @@ import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
 import { getDashboard, getPatient, getPatients, STATUS_LABELS, OPERATION_LABELS, EYE_LABELS, type PatientStatus } from '@/lib/patients';
-import { getUnreadCount } from '@/lib/notifications';
+import { useNotifications } from '@/hooks/useNotifications';
 import { getPatientChecklist, getChecklistProgress, CHECKLIST_STATUS_LABELS } from '@/lib/checklists';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -90,11 +90,7 @@ export default function HomeScreen() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: unread } = useQuery({
-    queryKey: ['notifications', 'unread-count'],
-    queryFn: getUnreadCount,
-    refetchInterval: 30000,
-  });
+  const { unreadCount } = useNotifications();
 
   const stats = dashboard?.data;
 
@@ -141,12 +137,12 @@ export default function HomeScreen() {
         </View>
 
         {/* Notifications Card */}
-        {unread != null && unread > 0 && (
+        {unreadCount != null && unreadCount > 0 && (
           <Card style={[styles.notifCard, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
             <View style={styles.notifContent}>
               <View style={[styles.notifDot, { backgroundColor: colors.primary, width: dotSize, height: dotSize, borderRadius: dotSize / 2 }]} />
               <ThemedText style={[styles.notifText, { fontSize: notifTextSize }]}>
-                {unread} {unread === 1 ? 'новое уведомление' : unread < 5 ? 'новых уведомления' : 'новых уведомлений'}
+                {unreadCount} {unreadCount === 1 ? 'новое уведомление' : unreadCount < 5 ? 'новых уведомления' : 'новых уведомлений'}
               </ThemedText>
             </View>
           </Card>
