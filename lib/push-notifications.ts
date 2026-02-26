@@ -5,10 +5,18 @@ import Constants from 'expo-constants';
 import { apiFetch } from './api';
 
 export interface PushNotificationData {
-  type: 'comment' | 'status_change' | 'surgery_reminder' | 'moderation_completed';
-  patientId?: string;
-  commentId?: string;
-  surgeryId?: string;
+  type:
+    | 'status_change'
+    | 'doctor_assigned'
+    | 'surgeon_assigned'
+    | 'surgery_scheduled'
+    | 'diagnosis_set'
+    | 'operation_type_set'
+    | 'comment'
+    | 'checklist_update'
+    | 'iol_calculation'
+    | 'media_uploaded';
+  patient_id?: number;
   title: string;
   body: string;
 }

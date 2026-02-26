@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   registerForPushNotifications,
   sendPushToken,
@@ -17,6 +18,7 @@ import { useAuth } from '@/contexts/auth-context';
 export function usePushNotifications() {
   const { user } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
   const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
 
@@ -41,6 +43,9 @@ export function usePushNotifications() {
     notificationListener.current = Notifications.addNotificationReceivedListener(
       (notification) => {
         console.log('Notification received in foreground:', notification);
+
+        // Invalidate notifications queries to refresh the list
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
         // Update badge count on iOS
         if (Platform.OS === 'ios') {
@@ -68,7 +73,7 @@ export function usePushNotifications() {
         responseListener.current.remove();
       }
     };
-  }, [user]);
+  }, [user, queryClient]);
 
   /**
    * Navigate to the appropriate screen based on notification type
@@ -77,40 +82,18 @@ export function usePushNotifications() {
     if (!data.type) return;
 
     try {
-      switch (data.type) {
-        case 'comment':
-          if (data.patientId) {
-            router.push(`/(tabs)/patients/${data.patientId}`);
-          }
-          break;
-
-        case 'status_change':
-          if (data.patientId) {
-            router.push(`/(tabs)/patients/${data.patientId}`);
-          }
-          break;
-
-        case 'surgery_reminder':
-          if (data.surgeryId) {
-            // Navigate to notifications tab where surgery info might be displayed
-            router.push('/(tabs)/notifications');
-          }
-          break;
-
-        case 'moderation_completed':
-          if (data.patientId) {
-            router.push(`/(tabs)/patients/${data.patientId}`);
-          }
-          break;
-
-        default:
-          console.warn('Unknown notification type:', data.type);
+      // Most notification types should navigate to patient detail
+      if (data.patient_id) {
+        router.push(`/(tabs)/patients/${data.patient_id}` as any);
       }
 
       // Clear badge after handling notification
       if (Platform.OS === 'ios') {
         setBadgeCount(0);
       }
+
+      // Invalidate notifications to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (error) {
       console.error('Error navigating from notification:', error);
     }

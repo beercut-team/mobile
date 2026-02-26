@@ -6,29 +6,40 @@ import {
   RefreshControl,
   Pressable,
 } from 'react-native';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
-import {
-  getNotifications,
-  markAsRead,
-  markAllAsRead,
-  type Notification,
-} from '@/lib/notifications';
+import { useNotifications } from '@/hooks/useNotifications';
+import type { Notification, NotificationType } from '@/lib/notifications';
+
+// Icon mapping for notification types
+const NOTIFICATION_ICONS: Record<NotificationType, Parameters<typeof IconSymbol>[0]['name']> = {
+  status_change: 'arrow.triangle.2.circlepath',
+  doctor_assigned: 'person.badge.plus',
+  surgeon_assigned: 'stethoscope',
+  surgery_scheduled: 'calendar.badge.clock',
+  diagnosis_set: 'doc.text.magnifyingglass',
+  operation_type_set: 'cross.case',
+  comment: 'bubble.left.and.bubble.right',
+  checklist_update: 'checklist',
+  iol_calculation: 'function',
+  media_uploaded: 'doc.badge.arrow.up',
+};
 
 export default function NotificationsScreen() {
   const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
-  const queryClient = useQueryClient();
+  const router = useRouter();
 
   const titleSize = useAccessibilityFontSize(28);
   const notifTitleSize = useAccessibilityFontSize(15);
@@ -37,31 +48,21 @@ export default function NotificationsScreen() {
   const emptyIconSize = useAccessibilityFontSize(40);
   const emptyTextSize = useAccessibilityFontSize(15);
   const unreadDotSize = useAccessibilityFontSize(8);
+  const iconSize = useAccessibilityFontSize(20);
   const borderRadius = useAccessibilityFontSize(14);
   const markAllBtnHeight = useAccessibilityFontSize(36);
   const markAllBtnPadding = useAccessibilityFontSize(12);
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: () => getNotifications(1, 50),
-  });
+  const {
+    notifications,
+    isLoading,
+    refetch,
+    markAsRead,
+    markAllAsRead,
+    isMarkingAllRead,
+  } = useNotifications(1, 50);
 
-  const notifications = data?.data ?? [];
   const hasUnread = notifications.some((n) => !n.is_read);
-
-  const markReadMutation = useMutation({
-    mutationFn: markAsRead,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    },
-  });
-
-  const markAllMutation = useMutation({
-    mutationFn: markAllAsRead,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    },
-  });
 
   const onRefresh = useCallback(() => {
     refetch();
@@ -82,46 +83,63 @@ export default function NotificationsScreen() {
     return date.toLocaleDateString('ru-RU');
   };
 
-  const renderNotification = ({ item }: { item: Notification }) => (
-    <Pressable
-      onPress={() => {
-        if (!item.is_read) {
-          markReadMutation.mutate(item.id);
-        }
-      }}
-      style={({ pressed }) => [
-        styles.notifItem,
-        {
-          backgroundColor: item.is_read
-            ? colors.card
-            : colors.primary + '08',
-          borderColor: item.is_read ? colors.border : colors.primary + '25',
-          opacity: pressed ? 0.8 : 1,
-          borderRadius,
-        },
-      ]}
-    >
-      <View style={styles.notifRow}>
-        {!item.is_read && (
-          <View style={[styles.unreadDot, { backgroundColor: colors.primary, width: unreadDotSize, height: unreadDotSize, borderRadius: unreadDotSize / 2 }]} />
-        )}
-        <View style={styles.notifContent}>
-          <ThemedText style={[styles.notifTitle, { fontSize: notifTitleSize }]} numberOfLines={1}>
-            {item.title}
-          </ThemedText>
-          <ThemedText
-            style={[styles.notifMessage, { color: colors.mutedForeground, fontSize: notifMessageSize }]}
-            numberOfLines={2}
-          >
-            {item.message}
-          </ThemedText>
-          <ThemedText style={[styles.notifDate, { color: colors.mutedForeground, fontSize: notifDateSize }]}>
-            {formatDate(item.created_at)}
-          </ThemedText>
+  const handleNotificationPress = (notification: Notification) => {
+    // Mark as read if unread
+    if (!notification.is_read) {
+      markAsRead(notification.id);
+    }
+
+    // Navigate to patient detail if patient_id exists
+    if (notification.patient_id) {
+      router.push(`/(tabs)/patients/${notification.patient_id}` as any);
+    }
+  };
+
+  const renderNotification = ({ item }: { item: Notification }) => {
+    const iconName = NOTIFICATION_ICONS[item.type] || 'bell.fill';
+
+    return (
+      <Pressable
+        onPress={() => handleNotificationPress(item)}
+        style={({ pressed }) => [
+          styles.notifItem,
+          {
+            backgroundColor: item.is_read
+              ? colors.card
+              : colors.primary + '08',
+            borderColor: item.is_read ? colors.border : colors.primary + '25',
+            opacity: pressed ? 0.8 : 1,
+            borderRadius,
+          },
+        ]}
+      >
+        <View style={styles.notifRow}>
+          <View style={[styles.iconContainer, { width: iconSize + 16, height: iconSize + 16, borderRadius: (iconSize + 16) / 2, backgroundColor: colors.primary + '15' }]}>
+            <IconSymbol name={iconName} size={iconSize} color={colors.primary} />
+          </View>
+          <View style={styles.notifContent}>
+            <View style={styles.notifHeader}>
+              <ThemedText style={[styles.notifTitle, { fontSize: notifTitleSize }]} numberOfLines={1}>
+                {item.title}
+              </ThemedText>
+              {!item.is_read && (
+                <View style={[styles.unreadDot, { backgroundColor: colors.primary, width: unreadDotSize, height: unreadDotSize, borderRadius: unreadDotSize / 2 }]} />
+              )}
+            </View>
+            <ThemedText
+              style={[styles.notifMessage, { color: colors.mutedForeground, fontSize: notifMessageSize }]}
+              numberOfLines={2}
+            >
+              {item.message}
+            </ThemedText>
+            <ThemedText style={[styles.notifDate, { color: colors.mutedForeground, fontSize: notifDateSize }]}>
+              {formatDate(item.created_at)}
+            </ThemedText>
+          </View>
         </View>
-      </View>
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -132,8 +150,8 @@ export default function NotificationsScreen() {
         {hasUnread && (
           <Button
             variant="ghost"
-            onPress={() => markAllMutation.mutate()}
-            loading={markAllMutation.isPending}
+            onPress={() => markAllAsRead()}
+            loading={isMarkingAllRead}
             style={[styles.markAllBtn, { height: markAllBtnHeight, paddingHorizontal: markAllBtnPadding }]}
           >
             Прочитать все
@@ -198,18 +216,27 @@ const styles = StyleSheet.create({
   notifRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: 12,
   },
-  unreadDot: {
-    marginTop: 6,
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   notifContent: {
     flex: 1,
     gap: 4,
   },
+  notifHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   notifTitle: {
     fontWeight: '600',
+    flex: 1,
   },
+  unreadDot: {},
   notifMessage: {
     lineHeight: 18,
   },

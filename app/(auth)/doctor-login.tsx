@@ -20,11 +20,16 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 
 interface FieldErrors {
-  accessCode?: string;
+  email?: string;
+  password?: string;
 }
 
-export default function PatientLoginScreen() {
-  const { loginWithCode } = useAuth();
+function validateEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+export default function LoginScreen() {
+  const { login } = useAuth();
   const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
@@ -35,7 +40,8 @@ export default function PatientLoginScreen() {
   const errorTextSize = useAccessibilityFontSize(13);
   const borderRadius = useAccessibilityFontSize(12);
 
-  const [accessCode, setAccessCode] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -44,13 +50,20 @@ export default function PatientLoginScreen() {
 
     setErrors((prev) => {
       const next = { ...prev };
-      if (field === 'accessCode') {
-        if (!accessCode.trim()) next.accessCode = 'Введите код доступа';
-        else next.accessCode = undefined;
+      switch (field) {
+        case 'email':
+          if (!email.trim()) next.email = 'Введите email';
+          else if (!validateEmail(email.trim())) next.email = 'Некорректный email';
+          else next.email = undefined;
+          break;
+        case 'password':
+          if (!password) next.password = 'Введите пароль';
+          else next.password = undefined;
+          break;
       }
       return next;
     });
-  }, [accessCode]);
+  }, [email, password]);
 
   const handleFieldChange = useCallback((field: keyof FieldErrors, value: string, setter: (v: string) => void) => {
     setter(value);
@@ -62,15 +75,18 @@ export default function PatientLoginScreen() {
   const validate = (): boolean => {
     const next: FieldErrors = {};
 
-    if (!accessCode.trim()) next.accessCode = 'Введите код доступа';
+    if (!email.trim()) next.email = 'Введите email';
+    else if (!validateEmail(email.trim())) next.email = 'Некорректный email';
+
+    if (!password) next.password = 'Введите пароль';
 
     setErrors(next);
-    setTouched({ accessCode: true });
+    setTouched({ email: true, password: true });
     return !Object.values(next).some(Boolean);
   };
 
   const mutation = useMutation({
-    mutationFn: () => loginWithCode(accessCode.trim()),
+    mutationFn: () => login(email.trim(), password),
   });
 
   const handleLogin = () => {
@@ -90,10 +106,10 @@ export default function PatientLoginScreen() {
       >
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text, fontSize: titleSize }]}>
-            Вход для пациента
+            Вход в аккаунт
           </Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground, fontSize: subtitleSize }]}>
-            Введите код доступа, который вам выдал врач
+            Войдите, чтобы продолжить
           </Text>
         </View>
 
@@ -111,15 +127,28 @@ export default function PatientLoginScreen() {
 
         <Card style={styles.card}>
           <Input
-            label="Код доступа"
-            placeholder="Например: ABC123XYZ"
-            value={accessCode}
-            onChangeText={(v) => handleFieldChange('accessCode', v, setAccessCode)}
-            onBlur={() => handleBlur('accessCode')}
-            autoCapitalize="characters"
+            label="Электронная почта"
+            placeholder="you@example.com"
+            value={email}
+            onChangeText={(v) => handleFieldChange('email', v, setEmail)}
+            onBlur={() => handleBlur('email')}
+            keyboardType="email-address"
+            autoCapitalize="none"
             autoCorrect={false}
             containerStyle={styles.field}
-            error={errors.accessCode}
+            error={errors.email}
+          />
+
+          <Input
+            label="Пароль"
+            placeholder="Ваш пароль"
+            value={password}
+            onChangeText={(v) => handleFieldChange('password', v, setPassword)}
+            onBlur={() => handleBlur('password')}
+            secureTextEntry
+            showPasswordToggle
+            containerStyle={styles.field}
+            error={errors.password}
           />
 
           <Button
@@ -133,11 +162,11 @@ export default function PatientLoginScreen() {
 
         <View style={styles.footer}>
           <Text style={{ color: colors.mutedForeground }}>
-            Вы врач?{' '}
+            Нет аккаунта?{' '}
           </Text>
-          <Link href="/(auth)/doctor-login">
+          <Link href="/(auth)/register">
             <Text style={{ color: colors.primary, fontWeight: '600' }}>
-              Войти через email
+              Регистрация
             </Text>
           </Link>
         </View>
@@ -162,9 +191,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 8,
   },
-  subtitle: {
-    lineHeight: 22,
-  },
+  subtitle: {},
   serverError: {
     borderWidth: 1,
     padding: 14,
@@ -190,6 +217,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 24,
-    flexWrap: 'wrap',
   },
 });

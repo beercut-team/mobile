@@ -33,6 +33,17 @@ const MAPPING = {
   'paperclip': 'attach-file',
   'checklist': 'checklist',
   'trash': 'delete',
+  // Notification icons
+  'arrow.triangle.2.circlepath': 'sync',
+  'person.badge.plus': 'person-add',
+  'stethoscope': 'medical-services',
+  'calendar.badge.clock': 'schedule',
+  'doc.text.magnifyingglass': 'pageview',
+  'cross.case': 'local-hospital',
+  'bubble.left.and.bubble.right': 'chat',
+  'function': 'functions',
+  'doc.badge.arrow.up': 'upload-file',
+  'doc.fill': 'description',
 } as IconMapping;
 
 export function IconSymbol({

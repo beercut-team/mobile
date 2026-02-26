@@ -9,6 +9,7 @@ import {
 
 import {
   loginUser,
+  loginPatient,
   registerUser,
   getMe,
   logoutUser as apiLogout,
@@ -23,6 +24,7 @@ interface AuthContextValue {
   user: UserResponse | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithCode: (accessCode: string) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   hasRole: (...roles: UserRole[]) => boolean;
@@ -60,6 +62,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(me);
   }, []);
 
+  const loginWithCode = useCallback(async (accessCode: string) => {
+    const authRes = await loginPatient({ access_code: accessCode });
+    await setTokens({
+      accessToken: authRes.access_token,
+      refreshToken: authRes.refresh_token,
+    });
+    // Use user data from login response instead of calling /me
+    // because /me endpoint has a bug for patient tokens
+    setUser(authRes.user);
+  }, []);
+
   const register = useCallback(async (data: RegisterRequest) => {
     const authRes = await registerUser(data);
     await setTokens({
@@ -90,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, hasRole }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithCode, register, logout, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

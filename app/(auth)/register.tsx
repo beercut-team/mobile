@@ -303,7 +303,7 @@ export default function RegisterScreen() {
           <Text style={{ color: colors.mutedForeground }}>
             Уже есть аккаунт?{' '}
           </Text>
-          <Link href="/(auth)/login">
+          <Link href="/(auth)/doctor-login">
             <Text style={{ color: colors.primary, fontWeight: '600' }}>
               Войти
             </Text>

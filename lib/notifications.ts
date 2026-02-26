@@ -1,12 +1,24 @@
 import { apiFetch } from './api';
 import type { ApiResponse } from './auth';
 
+export type NotificationType =
+  | 'status_change'
+  | 'doctor_assigned'
+  | 'surgeon_assigned'
+  | 'surgery_scheduled'
+  | 'diagnosis_set'
+  | 'operation_type_set'
+  | 'comment'
+  | 'checklist_update'
+  | 'iol_calculation'
+  | 'media_uploaded';
+
 export interface Notification {
   id: number;
   user_id: number;
   title: string;
   message: string;
-  type: string;
+  type: NotificationType;
   is_read: boolean;
   patient_id?: number;
   created_at: string;

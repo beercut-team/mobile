@@ -97,5 +97,6 @@ export const Fonts = Platform.select({
   },
 });
 
-// Font size multiplier for accessibility mode (2.0 = 100% increase for visually impaired)
-export const AccessibilityFontScale = 2.0;
+// Base font size multiplier for low-vision mode.
+// We keep it moderate to preserve layout and readability across dense medical screens.
+export const AccessibilityFontScale = 1.34;

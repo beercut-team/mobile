@@ -33,6 +33,14 @@ export interface Patient {
   status: PatientStatus;
   doctor_id: number;
   surgeon_id?: number | null;
+  doctor?: {
+    id: number;
+    name: string;
+  } | null;
+  surgeon?: {
+    id: number;
+    name: string;
+  } | null;
   district_id: number;
   notes?: string;
   surgery_date?: string | null;

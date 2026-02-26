@@ -1,30 +1,28 @@
 import { View, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Button } from '@/components/ui/button';
 import { Colors } from '@/constants/theme';
 import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
 import { useAuth } from '@/contexts/auth-context';
-import { getUnreadCount } from '@/lib/notifications';
 
 interface MenuItem {
   id: string;
   title: string;
   icon: React.ComponentProps<typeof IconSymbol>['name'];
   route: string;
-  badge?: number;
 }
 
 export default function MoreScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { isAccessibilityMode } = useAccessibility();
+  const { user, hasRole } = useAuth();
+  const { isAccessibilityMode, toggleAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
@@ -32,25 +30,22 @@ export default function MoreScreen() {
   const titleSize = useAccessibilityFontSize(28);
   const itemTitleSize = useAccessibilityFontSize(16);
   const itemIconSize = useAccessibilityFontSize(24);
-  const badgeSize = useAccessibilityFontSize(20);
-  const badgeFontSize = useAccessibilityFontSize(11);
   const padding = useAccessibilityFontSize(16);
   const borderRadius = useAccessibilityFontSize(12);
+  const sectionTitleSize = useAccessibilityFontSize(15);
+  const sectionDescSize = useAccessibilityFontSize(13);
+  const bottomSectionLift = useAccessibilityFontSize(10);
+  const tabBarClearance = Math.max(136, insets.bottom + 108);
 
-  const { data: unreadCount } = useQuery({
-    queryKey: ['notifications', 'unread-count'],
-    queryFn: getUnreadCount,
-    refetchInterval: 30000,
-  });
+  const isPatient = hasRole('PATIENT');
 
   const menuItems: MenuItem[] = [
-    {
-      id: 'notifications',
-      title: 'Уведомления',
-      icon: 'bell.fill',
-      route: '/(tabs)/notifications',
-      badge: unreadCount || undefined,
-    },
+    ...(isPatient ? [{
+      id: 'documents',
+      title: 'Прикрепленные документы',
+      icon: 'doc.fill' as React.ComponentProps<typeof IconSymbol>['name'],
+      route: '/(tabs)/documents',
+    }] : []),
     {
       id: 'profile',
       title: 'Профиль',
@@ -72,7 +67,7 @@ export default function MoreScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: 120 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarClearance }]}
         showsVerticalScrollIndicator={false}
       >
         {menuItems.map((item) => (
@@ -119,58 +114,63 @@ export default function MoreScreen() {
             </View>
 
             <View style={styles.menuItemRight}>
-              {item.badge && item.badge > 0 && (
-                <View
-                  style={[
-                    styles.badge,
-                    {
-                      minWidth: badgeSize,
-                      height: badgeSize,
-                      borderRadius: badgeSize / 2,
-                    },
-                  ]}
-                >
-                  <ThemedText
-                    style={[
-                      styles.badgeText,
-                      {
-                        fontSize: badgeFontSize,
-                      },
-                    ]}
-                  >
-                    {item.badge > 99 ? '99+' : item.badge}
-                  </ThemedText>
-                </View>
-              )}
               <IconSymbol name="chevron.right" size={20} color={colors.mutedForeground} />
             </View>
           </Pressable>
         ))}
 
-        {/* User Info Card */}
-        <View
-          style={[
-            styles.userCard,
-            {
-              backgroundColor: colors.muted,
-              padding,
-              borderRadius,
-              marginTop: 24,
-            },
-          ]}
-        >
-          <ThemedText style={[styles.userLabel, { color: colors.mutedForeground }]}>
-            Вы вошли как
-          </ThemedText>
-          <ThemedText style={[styles.userName, { fontSize: itemTitleSize }]}>
-            {user?.name || user?.first_name || 'Пользователь'}
-          </ThemedText>
-          <ThemedText style={[styles.userRole, { color: colors.mutedForeground }]}>
-            {user?.role === 'DISTRICT_DOCTOR' && 'Районный врач'}
-            {user?.role === 'SURGEON' && 'Хирург'}
-            {user?.role === 'PATIENT' && 'Пациент'}
-            {user?.role === 'ADMIN' && 'Администратор'}
-          </ThemedText>
+        <View style={[styles.bottomSection, { marginBottom: bottomSectionLift }]}>
+          {/* User Info Card */}
+          <View
+            style={[
+              styles.userCard,
+              {
+                backgroundColor: colors.muted,
+                padding,
+                borderRadius,
+              },
+            ]}
+          >
+            <ThemedText style={[styles.userLabel, { color: colors.mutedForeground }]}>
+              Вы вошли как
+            </ThemedText>
+            <ThemedText style={[styles.userName, { fontSize: itemTitleSize }]}>
+              {user?.name || user?.first_name || 'Пользователь'}
+            </ThemedText>
+            <ThemedText style={[styles.userRole, { color: colors.mutedForeground }]}>
+              {user?.role === 'DISTRICT_DOCTOR' && 'Районный врач'}
+              {user?.role === 'SURGEON' && 'Хирург'}
+              {user?.role === 'PATIENT' && 'Пациент'}
+              {user?.role === 'ADMIN' && 'Администратор'}
+            </ThemedText>
+          </View>
+
+          {/* Low Vision Mode */}
+          <View
+            style={[
+              styles.accessibilityCard,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                padding,
+                borderRadius,
+              },
+            ]}
+          >
+            <ThemedText style={[styles.accessibilityTitle, { fontSize: sectionTitleSize }]}>
+              Версия для слабовидящих
+            </ThemedText>
+            <ThemedText style={[styles.accessibilityDesc, { color: colors.mutedForeground, fontSize: sectionDescSize }]}>
+              {isAccessibilityMode ? 'Сейчас включена' : 'Сейчас выключена'}
+            </ThemedText>
+            <Button
+              onPress={toggleAccessibilityMode}
+              variant={isAccessibilityMode ? 'outline' : 'default'}
+              style={styles.accessibilityButton}
+            >
+              {isAccessibilityMode ? 'Выключить режим' : 'Включить режим'}
+            </Button>
+          </View>
         </View>
       </ScrollView>
     </ThemedView>
@@ -187,6 +187,12 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
+    flexGrow: 1,
+  },
+  bottomSection: {
+    marginTop: 'auto',
+    paddingTop: 12,
+    gap: 12,
   },
   menuItem: {
     flexDirection: 'row',
@@ -216,16 +222,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  badge: {
-    backgroundColor: '#EF4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  badgeText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
   userCard: {
     gap: 4,
   },
@@ -237,5 +233,16 @@ const styles = StyleSheet.create({
   },
   userRole: {
     fontSize: 14,
+  },
+  accessibilityCard: {
+    borderWidth: 1,
+    gap: 8,
+  },
+  accessibilityTitle: {
+    fontWeight: '600',
+  },
+  accessibilityDesc: {},
+  accessibilityButton: {
+    marginTop: 4,
   },
 });

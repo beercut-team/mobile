@@ -9,9 +9,10 @@ interface StatusBadgeProps {
   status: string;
   percentage: number;
   size?: BadgeSize;
+  multiline?: boolean;
 }
 
-export function StatusBadge({ status, percentage, size = 'md' }: StatusBadgeProps) {
+export function StatusBadge({ status, percentage, size = 'md', multiline = false }: StatusBadgeProps) {
   const theme = useColorScheme() ?? 'light';
 
   // Size configurations
@@ -74,10 +75,11 @@ export function StatusBadge({ status, percentage, size = 'md' }: StatusBadgeProp
       accessibilityLabel={`${status}, ${percentage} процентов`}
     >
       <Text
-        numberOfLines={1}
-        ellipsizeMode="tail"
+        numberOfLines={multiline ? undefined : 1}
+        ellipsizeMode={multiline ? undefined : 'tail'}
         style={[
           styles.text,
+          multiline ? styles.textMultiline : undefined,
           {
             color: statusColors.text,
             fontSize: config.fontSize,
@@ -101,5 +103,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     minWidth: 0,
     flexShrink: 1,
+  },
+  textMultiline: {
+    flexWrap: 'wrap',
   },
 });

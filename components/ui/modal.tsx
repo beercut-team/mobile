@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -20,15 +21,20 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  bottomOffset?: number;
 }
 
-export function Modal({ visible, onClose, title, children }: ModalProps) {
+export function Modal({ visible, onClose, title, children, bottomOffset = 0 }: ModalProps) {
   const theme = useColorScheme() ?? 'light';
   const { isAccessibilityMode } = useAccessibility();
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
+  const insets = useSafeAreaInsets();
   const titleFontSize = useAccessibilityFontSize(18);
   const padding = useAccessibilityFontSize(24);
   const borderRadius = useAccessibilityFontSize(16);
+  const bottomInsetPadding = Platform.OS === 'ios' ? Math.max(insets.bottom, 12) : 0;
+  const modalBottomOffset = Platform.OS === 'ios' ? bottomOffset : 0;
+  const shouldFloatOnIOS = Platform.OS === 'ios' && modalBottomOffset > 0;
 
   return (
     <RNModal
@@ -49,8 +55,17 @@ export function Modal({ visible, onClose, title, children }: ModalProps) {
             styles.content,
             {
               backgroundColor: colors.card,
-              padding,
+              paddingTop: padding,
+              paddingHorizontal: padding,
+              paddingBottom: padding + bottomInsetPadding,
               borderRadius,
+              ...(Platform.OS === 'ios'
+                ? {
+                    marginBottom: modalBottomOffset,
+                    borderBottomLeftRadius: shouldFloatOnIOS ? borderRadius : 0,
+                    borderBottomRightRadius: shouldFloatOnIOS ? borderRadius : 0,
+                  }
+                : {}),
             },
           ]}
           entering={Platform.OS === 'ios' ? SlideInDown.duration(300) : FadeIn.duration(200)}

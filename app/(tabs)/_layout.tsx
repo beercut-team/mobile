@@ -7,6 +7,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/auth-context';
 import { useAccessibility } from '@/contexts/accessibility-context';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -18,6 +19,9 @@ export default function TabLayout() {
   const canModerate = hasRole('SURGEON', 'ADMIN');
   const showNotificationsTab = !canModerate;
   const showProfileTab = !canViewPatients;
+
+  // Get unread count for badge (only fetch if tab is visible)
+  const { unreadCount } = useNotifications(1, 1);
 
   return (
     <Tabs
@@ -55,6 +59,7 @@ export default function TabLayout() {
         options={{
           title: 'Уведомления',
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="bell.fill" color={color} />,
+          tabBarBadge: showNotificationsTab && unreadCount > 0 ? unreadCount : undefined,
           href: showNotificationsTab ? undefined : null,
         }}
       />
@@ -72,6 +77,14 @@ export default function TabLayout() {
           title: 'Ещё',
           tabBarIcon: ({ color, size }) => <IconSymbol size={size ?? 24} name="ellipsis.circle.fill" color={color} />,
           href: undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="documents"
+        options={{
+          title: 'Документы',
+          href: null,
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="doc.fill" color={color} />,
         }}
       />
       <Tabs.Screen

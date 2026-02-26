@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -30,7 +31,9 @@ export default function PatientDetailScreen() {
   const theme = useColorScheme() ?? 'light';
   const { isAccessibilityMode } = useAccessibility();
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
+  const insets = useSafeAreaInsets();
   const padding = useAccessibilityFontSize(16);
+  const actionsRadius = useAccessibilityFontSize(16);
 
   const patientId = parseInt(id, 10);
 
@@ -263,28 +266,48 @@ export default function PatientDetailScreen() {
         options={{
           title: 'Детали пациента',
           headerBackTitle: 'Назад',
+          headerShown: false,
         }}
       />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <ScrollView>
-          <PatientHeader patient={patient} progress={progress} />
+        <ScrollView contentContainerStyle={styles.mainContent}>
+          <PatientHeader
+            patient={patient}
+            progress={progress}
+            topInset={insets.top + 8}
+            onBack={() => router.back()}
+          />
 
-          <View style={[styles.section, { padding }]}>
+          <View style={[styles.section, { paddingHorizontal: padding }]}>
             <PassportDataSection patient={patient} />
           </View>
 
-          <View style={styles.actionsSection}>
-            <Button variant="outline" onPress={() => console.log('Edit')}>
-              Редактировать
-            </Button>
-            <Button
-              variant="outline"
-              onPress={() => setShowPDFMenu(true)}
-              loading={isDownloading}
-              disabled={isDownloading}
-            >
-              Скачать PDF
-            </Button>
+          <View
+            style={[
+              styles.actionsCard,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                borderRadius: actionsRadius,
+                marginHorizontal: padding,
+              },
+            ]}
+          >
+            <Text style={[styles.actionsTitle, { color: colors.text }]}>Действия</Text>
+            <View style={styles.actionsSection}>
+              <Button variant="outline" onPress={() => console.log('Edit')} style={styles.actionButton}>
+                Редактировать
+              </Button>
+              <Button
+                variant="outline"
+                onPress={() => setShowPDFMenu(true)}
+                loading={isDownloading}
+                disabled={isDownloading}
+                style={styles.actionButton}
+              >
+                Скачать PDF
+              </Button>
+            </View>
           </View>
         </ScrollView>
 
@@ -315,6 +338,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  mainContent: {
+    paddingBottom: 10,
+  },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -331,13 +357,26 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   section: {
-    marginBottom: 16,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  actionsCard: {
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 12,
+    gap: 10,
+  },
+  actionsTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    opacity: 0.7,
   },
   actionsSection: {
     flexDirection: 'row',
     gap: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+  },
+  actionButton: {
+    flex: 1,
   },
   tabContent: {
     flex: 1,

@@ -5,6 +5,11 @@ import {
   FlatList,
   RefreshControl,
   Alert,
+  Modal as RNModal,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,8 +18,7 @@ import { ThemedText } from '@/components/themed-text';
 import { PatientCard } from '@/components/patient/PatientCard';
 import { ActionSheet, type ActionSheetAction } from '@/components/ui/action-sheet';
 import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/ui/modal';
-import { Input } from '@/components/ui/input';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccessibility } from '@/contexts/accessibility-context';
@@ -29,6 +33,14 @@ export default function ModerationScreen() {
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
   const fontSize = useAccessibilityFontSize(14);
+  const tabBarClearance = Math.max(136, insets.bottom + 108);
+  const rejectSheetLift = Math.max(useAccessibilityFontSize(96), insets.bottom + 72);
+  const rejectSheetPadding = useAccessibilityFontSize(20);
+  const rejectSheetRadius = useAccessibilityFontSize(24);
+  const rejectTitleSize = useAccessibilityFontSize(18);
+  const rejectInputSize = useAccessibilityFontSize(16);
+  const rejectInputMinHeight = useAccessibilityFontSize(132);
+  const rejectInputRadius = useAccessibilityFontSize(14);
 
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showActionSheet, setShowActionSheet] = useState(false);
@@ -67,6 +79,12 @@ export default function ModerationScreen() {
       comment: rejectComment.trim() || undefined,
     });
 
+    setShowRejectModal(false);
+    setRejectComment('');
+    setSelectedPatient(null);
+  };
+
+  const closeRejectModal = () => {
     setShowRejectModal(false);
     setRejectComment('');
     setSelectedPatient(null);
@@ -137,7 +155,7 @@ export default function ModerationScreen() {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={[
           styles.list,
-          { paddingBottom: 120 },
+          { paddingBottom: tabBarClearance },
           !patients?.length && styles.emptyList,
         ]}
         ListEmptyComponent={renderEmpty}
@@ -159,45 +177,87 @@ export default function ModerationScreen() {
         }}
       />
 
-      <Modal
+      <RNModal
         visible={showRejectModal}
-        onClose={() => {
-          setShowRejectModal(false);
-          setRejectComment('');
-          setSelectedPatient(null);
-        }}
-        title="Причина отклонения"
+        transparent
+        animationType="fade"
+        onRequestClose={closeRejectModal}
+        statusBarTranslucent
       >
-        <View style={styles.modalContent}>
-          <Input
-            placeholder="Укажите, что нужно исправить..."
-            value={rejectComment}
-            onChangeText={setRejectComment}
-            multiline
-            numberOfLines={4}
-            style={styles.commentInput}
-          />
-          <View style={styles.modalButtons}>
-            <Button
-              variant="outline"
-              onPress={() => {
-                setShowRejectModal(false);
-                setRejectComment('');
-              }}
-              style={styles.modalButton}
+        <View style={styles.rejectOverlay}>
+          <Pressable style={styles.rejectBackdrop} onPress={closeRejectModal} />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={24}
+            style={styles.rejectKeyboardWrap}
+          >
+            <View
+              style={[
+                styles.rejectSheet,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  marginBottom: rejectSheetLift,
+                  borderRadius: rejectSheetRadius,
+                  padding: rejectSheetPadding,
+                },
+              ]}
             >
-              Отмена
-            </Button>
-            <Button
-              variant="destructive"
-              onPress={handleRejectSubmit}
-              style={styles.modalButton}
-            >
-              Отклонить
-            </Button>
-          </View>
+              <View style={styles.rejectHeader}>
+                <ThemedText style={[styles.rejectTitle, { fontSize: rejectTitleSize }]}>
+                  Причина отклонения
+                </ThemedText>
+                <Pressable
+                  onPress={closeRejectModal}
+                  style={styles.rejectCloseButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Закрыть"
+                >
+                  <IconSymbol name="xmark.circle.fill" size={28} color={colors.icon} />
+                </Pressable>
+              </View>
+
+              <TextInput
+                placeholder="Укажите, что нужно исправить..."
+                placeholderTextColor={colors.mutedForeground}
+                value={rejectComment}
+                onChangeText={setRejectComment}
+                multiline
+                numberOfLines={5}
+                textAlignVertical="top"
+                style={[
+                  styles.rejectInput,
+                  {
+                    minHeight: rejectInputMinHeight,
+                    borderRadius: rejectInputRadius,
+                    fontSize: rejectInputSize,
+                    color: colors.text,
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.border,
+                  },
+                ]}
+              />
+
+              <View style={styles.rejectButtons}>
+                <Button
+                  variant="outline"
+                  onPress={closeRejectModal}
+                  style={styles.rejectActionButton}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  variant="destructive"
+                  onPress={handleRejectSubmit}
+                  style={styles.rejectActionButton}
+                >
+                  Отклонить
+                </Button>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
         </View>
-      </Modal>
+      </RNModal>
     </ThemedView>
   );
 }
@@ -240,18 +300,47 @@ const styles = StyleSheet.create({
   rejectButton: {
     flex: 1,
   },
-  modalContent: {
-    gap: 16,
+  rejectOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
   },
-  commentInput: {
-    minHeight: 100,
-    textAlignVertical: 'top',
+  rejectBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  modalButtons: {
+  rejectKeyboardWrap: {
+    justifyContent: 'flex-end',
+  },
+  rejectSheet: {
+    borderWidth: 1,
+    maxHeight: '78%',
+    marginHorizontal: 12,
+  },
+  rejectHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  rejectTitle: {
+    fontWeight: '700',
+    flex: 1,
+  },
+  rejectCloseButton: {
+    marginLeft: 8,
+    flexShrink: 0,
+  },
+  rejectInput: {
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  rejectButtons: {
+    marginTop: 16,
     flexDirection: 'row',
     gap: 12,
   },
-  modalButton: {
+  rejectActionButton: {
     flex: 1,
   },
 });

@@ -18,6 +18,10 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface PatientLoginRequest {
+  access_code: string;
+}
+
 export interface AuthResponse {
   access_token: string;
   refresh_token: string;
@@ -76,6 +80,25 @@ export async function registerUser(data: RegisterRequest): Promise<AuthResponse>
 
 export async function loginUser(data: LoginRequest): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      const body = await res.json();
+      message = body.error ?? body.message ?? body.detail ?? message;
+    } catch {}
+    throw new Error(message);
+  }
+
+  return res.json();
+}
+
+export async function loginPatient(data: PatientLoginRequest): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/patient-login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),

@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View, Switch } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -40,13 +40,18 @@ function getInitials(name?: string, firstName?: string, lastName?: string) {
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
-  const { isAccessibilityMode, toggleAccessibilityMode } = useAccessibility();
+  const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
 
   const avatarSize = useAccessibilityFontSize(88);
   const avatarTextSize = useAccessibilityFontSize(32);
+  const avatarTextOffset = Math.max(1, Math.round(avatarTextSize * 0.06));
+  const avatarRingInset = useAccessibilityFontSize(5);
+  const avatarRingSize = avatarSize + avatarRingInset * 2;
+  const avatarStatusSize = useAccessibilityFontSize(16);
+  const avatarStatusBorder = Math.max(2, Math.round(useAccessibilityFontSize(2)));
   const nameSize = useAccessibilityFontSize(24);
   const roleTextSize = useAccessibilityFontSize(13);
   const roleDotSize = useAccessibilityFontSize(7);
@@ -60,8 +65,8 @@ export default function ProfileScreen() {
   const activeTagPaddingH = useAccessibilityFontSize(10);
   const activeTagPaddingV = useAccessibilityFontSize(4);
   const activeTagRadius = useAccessibilityFontSize(10);
-  const accessibilityTitleSize = useAccessibilityFontSize(16);
-  const accessibilityDescSize = useAccessibilityFontSize(13);
+  const tabBarClearance = Math.max(136, insets.bottom + 108);
+  const logoutButtonLift = useAccessibilityFontSize(10);
 
   const roleColor = ROLE_COLORS[user?.role ?? ''] ?? colors.primary;
 
@@ -80,19 +85,59 @@ export default function ProfileScreen() {
   }
 
   const filteredRows = infoRows.filter((r) => r.value);
+  const initials = getInitials(user?.name, user?.first_name, user?.last_name);
+  const isActive = user?.is_active !== false;
 
   return (
     <ThemedView style={styles.container}>
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: 120 }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: tabBarClearance }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Avatar + Name */}
         <View style={styles.header}>
-          <View style={[styles.avatar, { backgroundColor: roleColor, width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }]}>
-            <ThemedText style={[styles.avatarText, { color: '#fff', fontSize: avatarTextSize }]}>
-              {getInitials(user?.name, user?.first_name, user?.last_name)}
-            </ThemedText>
+          <View style={[styles.avatarWrap, { width: avatarRingSize, height: avatarRingSize }]}>
+            <View
+              style={[
+                styles.avatarRing,
+                {
+                  backgroundColor: roleColor + '12',
+                  borderColor: roleColor + '35',
+                  width: avatarRingSize,
+                  height: avatarRingSize,
+                  borderRadius: avatarRingSize / 2,
+                },
+              ]}
+            >
+              <View style={[styles.avatar, { backgroundColor: roleColor, width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }]}>
+                <Text
+                  style={[
+                    styles.avatarText,
+                    {
+                      color: '#fff',
+                      fontSize: avatarTextSize,
+                      lineHeight: avatarTextSize,
+                      transform: [{ translateY: avatarTextOffset }],
+                    },
+                  ]}
+                >
+                  {initials}
+                </Text>
+              </View>
+            </View>
+            <View
+              style={[
+                styles.avatarStatus,
+                {
+                  backgroundColor: isActive ? '#10B981' : colors.mutedForeground,
+                  borderColor: colors.background,
+                  width: avatarStatusSize,
+                  height: avatarStatusSize,
+                  borderRadius: avatarStatusSize / 2,
+                  borderWidth: avatarStatusBorder,
+                },
+              ]}
+            />
           </View>
           <ThemedText type="title" style={[styles.name, { fontSize: nameSize }]}>
             {user?.name || `${user?.last_name ?? ''} ${user?.first_name ?? ''}`.trim()}
@@ -128,26 +173,6 @@ export default function ProfileScreen() {
           ))}
         </Card>
 
-        {/* Accessibility Mode */}
-        <Card style={styles.accessibilityCard}>
-          <View style={styles.accessibilityHeader}>
-            <View style={styles.accessibilityInfo}>
-              <ThemedText style={[styles.accessibilityTitle, { fontSize: accessibilityTitleSize }]}>
-                Версия для слабовидящих
-              </ThemedText>
-              <ThemedText style={[styles.accessibilityDesc, { color: colors.mutedForeground, fontSize: accessibilityDescSize }]}>
-                Увеличенный шрифт и высокий контраст
-              </ThemedText>
-            </View>
-            <Switch
-              value={isAccessibilityMode}
-              onValueChange={toggleAccessibilityMode}
-              trackColor={{ false: colors.muted, true: colors.primary + '40' }}
-              thumbColor={isAccessibilityMode ? colors.primary : '#f4f3f4'}
-            />
-          </View>
-        </Card>
-
         {/* Account Status */}
         <Card style={styles.statusCard}>
           <View style={styles.statusRow}>
@@ -164,7 +189,7 @@ export default function ProfileScreen() {
         </Card>
 
         {/* Logout */}
-        <Button variant="destructive" onPress={logout} style={styles.logoutButton}>
+        <Button variant="destructive" onPress={logout} style={[styles.logoutButton, { marginBottom: logoutButtonLift }]}>
           Выйти из аккаунта
         </Button>
       </ScrollView>
@@ -183,13 +208,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 28,
   },
+  avatarWrap: {
+    marginBottom: 14,
+    position: 'relative',
+  },
+  avatarRing: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
   avatar: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 5,
   },
   avatarText: {
     fontWeight: '700',
+    includeFontPadding: false,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  avatarStatus: {
+    position: 'absolute',
+    right: 2,
+    bottom: 2,
   },
   name: {
     textAlign: 'center',
@@ -254,24 +300,5 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     marginTop: 16,
-  },
-  accessibilityCard: {
-    marginBottom: 14,
-  },
-  accessibilityHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  accessibilityInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  accessibilityTitle: {
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  accessibilityDesc: {
-    lineHeight: 18,
   },
 });

@@ -20,18 +20,26 @@ interface AccessibilityContextValue {
 const AccessibilityContext = createContext<AccessibilityContextValue | null>(null);
 
 async function getItem(key: string): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    return localStorage.getItem(key);
+  try {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    }
+    return SecureStore.getItemAsync(key);
+  } catch {
+    return null;
   }
-  return SecureStore.getItemAsync(key);
 }
 
 async function setItem(key: string, value: string): Promise<void> {
-  if (Platform.OS === 'web') {
-    localStorage.setItem(key, value);
-    return;
+  try {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+      return;
+    }
+    await SecureStore.setItemAsync(key, value);
+  } catch {
+    // ignore
   }
-  await SecureStore.setItemAsync(key, value);
 }
 
 export function AccessibilityProvider({ children }: { children: ReactNode }) {
@@ -53,15 +61,13 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  const toggleAccessibilityMode = useCallback(async () => {
-    const newValue = !isAccessibilityMode;
-    setIsAccessibilityMode(newValue);
-    try {
-      await setItem(ACCESSIBILITY_KEY, String(newValue));
-    } catch {
-      // ignore
-    }
-  }, [isAccessibilityMode]);
+  const toggleAccessibilityMode = useCallback(() => {
+    setIsAccessibilityMode((prev) => {
+      const next = !prev;
+      void setItem(ACCESSIBILITY_KEY, String(next));
+      return next;
+    });
+  }, []);
 
   return (
     <AccessibilityContext.Provider

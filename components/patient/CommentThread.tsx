@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -20,12 +21,14 @@ export function CommentThread({ comments, onAddComment, isLoading = false }: Com
   const theme = useColorScheme() ?? 'light';
   const { isAccessibilityMode } = useAccessibility();
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
+  const insets = useSafeAreaInsets();
   const fontSize = useAccessibilityFontSize(14);
   const authorFontSize = useAccessibilityFontSize(13);
   const dateFontSize = useAccessibilityFontSize(12);
   const urgentFontSize = useAccessibilityFontSize(11);
   const padding = useAccessibilityFontSize(16);
   const borderRadius = useAccessibilityFontSize(12);
+  const bottomInsetPadding = Math.max(insets.bottom, 12);
 
   const handleSubmit = () => {
     if (newComment.trim()) {
@@ -142,7 +145,8 @@ export function CommentThread({ comments, onAddComment, isLoading = false }: Com
             Комментариев пока нет
           </Text>
         }
-        inverted
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       />
 
       <View
@@ -151,7 +155,9 @@ export function CommentThread({ comments, onAddComment, isLoading = false }: Com
           {
             backgroundColor: colors.card,
             borderTopColor: colors.border,
-            padding,
+            paddingTop: padding,
+            paddingHorizontal: padding,
+            paddingBottom: padding + bottomInsetPadding,
           },
         ]}
       >
@@ -179,6 +185,7 @@ export function CommentThread({ comments, onAddComment, isLoading = false }: Com
             variant={isUrgent ? 'destructive' : 'outline'}
             onPress={() => setIsUrgent(!isUrgent)}
             accessibilityLabel={isUrgent ? 'Отменить срочность' : 'Пометить как срочное'}
+            style={styles.actionButton}
           >
             {isUrgent ? '🔴 Срочно' : 'Срочно'}
           </Button>
@@ -186,6 +193,7 @@ export function CommentThread({ comments, onAddComment, isLoading = false }: Com
             onPress={handleSubmit}
             disabled={!newComment.trim() || isLoading}
             accessibilityLabel="Отправить комментарий"
+            style={styles.actionButton}
           >
             Отправить
           </Button>
@@ -201,6 +209,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
+    paddingBottom: 10,
     gap: 12,
   },
   commentItem: {
@@ -244,13 +253,15 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    minHeight: 80,
-    maxHeight: 120,
+    minHeight: 88,
+    maxHeight: 138,
     textAlignVertical: 'top',
   },
   actions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     gap: 8,
+  },
+  actionButton: {
+    flex: 1,
   },
 });

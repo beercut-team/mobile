@@ -1,18 +1,12 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import {
   View,
   ScrollView,
   Pressable,
   Text,
   StyleSheet,
-  LayoutChangeEvent,
   Platform,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { Colors } from '@/constants/theme';
@@ -35,55 +29,36 @@ export function TabView({ tabs, initialTab }: TabViewProps) {
   const theme = useColorScheme() ?? 'light';
   const { isAccessibilityMode } = useAccessibility();
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
-  const fontSize = useAccessibilityFontSize(15);
-  const tabHeight = useAccessibilityFontSize(44);
+  const fontSize = useAccessibilityFontSize(14);
+  const tabHeight = useAccessibilityFontSize(40);
+  const tabsPadding = useAccessibilityFontSize(6);
+  const tabRadius = useAccessibilityFontSize(11);
+  const shellRadius = useAccessibilityFontSize(16);
 
   const [activeTab, setActiveTab] = useState(initialTab ?? tabs[0]?.key);
-  const [tabLayouts, setTabLayouts] = useState<Record<string, { x: number; width: number }>>({});
-  const scrollViewRef = useRef<ScrollView>(null);
-
-  const indicatorX = useSharedValue(0);
-  const indicatorWidth = useSharedValue(0);
-
-  const handleTabLayout = useCallback((key: string, event: LayoutChangeEvent) => {
-    const { x, width } = event.nativeEvent.layout;
-    setTabLayouts((prev) => ({ ...prev, [key]: { x, width } }));
-  }, []);
-
-  const handleTabPress = useCallback(
-    (key: string) => {
-      if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-      setActiveTab(key);
-
-      const layout = tabLayouts[key];
-      if (layout) {
-        indicatorX.value = withSpring(layout.x, { damping: 20, stiffness: 300 });
-        indicatorWidth.value = withSpring(layout.width, { damping: 20, stiffness: 300 });
-
-        // Scroll to make active tab visible
-        scrollViewRef.current?.scrollTo({
-          x: layout.x - 20,
-          animated: true,
-        });
-      }
-    },
-    [tabLayouts, indicatorX, indicatorWidth]
-  );
-
-  const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: indicatorX.value }],
-    width: indicatorWidth.value,
-  }));
+  const handleTabPress = (key: string) => {
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setActiveTab(key);
+  };
 
   const activeTabContent = tabs.find((tab) => tab.key === activeTab)?.content;
 
   return (
     <View style={styles.container}>
-      <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
+      <View
+        style={[
+          styles.tabsShell,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            borderRadius: shellRadius,
+            padding: tabsPadding,
+          },
+        ]}
+      >
         <ScrollView
-          ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
@@ -94,8 +69,15 @@ export function TabView({ tabs, initialTab }: TabViewProps) {
               <Pressable
                 key={tab.key}
                 onPress={() => handleTabPress(tab.key)}
-                onLayout={(e) => handleTabLayout(tab.key, e)}
-                style={[styles.tab, { height: tabHeight }]}
+                style={[
+                  styles.tab,
+                  {
+                    height: tabHeight,
+                    borderRadius: tabRadius,
+                    backgroundColor: isActive ? colors.primary + '18' : 'transparent',
+                    borderColor: isActive ? colors.primary + '45' : 'transparent',
+                  },
+                ]}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: isActive }}
               >
@@ -108,6 +90,7 @@ export function TabView({ tabs, initialTab }: TabViewProps) {
                       fontWeight: isActive ? '600' : '400',
                     },
                   ]}
+                  numberOfLines={1}
                 >
                   {tab.title}
                 </Text>
@@ -115,13 +98,6 @@ export function TabView({ tabs, initialTab }: TabViewProps) {
             );
           })}
         </ScrollView>
-        <Animated.View
-          style={[
-            styles.indicator,
-            { backgroundColor: colors.primary },
-            indicatorStyle,
-          ]}
-        />
       </View>
       <View style={styles.contentContainer}>{activeTabContent}</View>
     </View>
@@ -132,27 +108,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  tabsContainer: {
-    borderBottomWidth: 1,
-    position: 'relative',
+  tabsShell: {
+    borderWidth: 1,
+    marginHorizontal: 12,
+    marginTop: 4,
+    marginBottom: 6,
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 4,
     gap: 8,
   },
   tab: {
     paddingHorizontal: 16,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   tabText: {
     textAlign: 'center',
-  },
-  indicator: {
-    position: 'absolute',
-    bottom: 0,
-    height: 2,
-    borderRadius: 1,
+    includeFontPadding: false,
   },
   contentContainer: {
     flex: 1,

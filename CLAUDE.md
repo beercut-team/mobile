@@ -20,6 +20,7 @@ React Native mobile app built with Expo SDK 54, using Expo Router for file-based
 - `npm run seed:iol <TOKEN>` — Seed IOL calculations
 - `npm run seed:statuses <TOKEN>` — Update patient statuses
 - `node scripts/seed-patient-notifications.js <TOKEN> [PATIENT_ID]` — Seed test notifications (requires backend support)
+- `node scripts/test-notifications.js <EMAIL> <PASSWORD>` — Test notification API endpoints (list, unread count, mark as read, push token registration)
 
 No test framework is configured yet.
 
@@ -42,7 +43,7 @@ No test framework is configured yet.
 
 **Offline Support:** Offline-first architecture with mutation queue in `/lib/offline-queue.ts`. Failed requests queued via `addToQueue()` in AsyncStorage (web: localStorage) and auto-synced when connection restores via `/lib/sync.ts`. Network status monitored via `@react-native-community/netinfo`. `useOfflineSync` hook manages sync state and triggers invalidation after successful sync.
 
-**Push Notifications:** Expo Notifications configured in `/lib/push-notifications.ts`. Token registration on auth, notification handlers for foreground/background, deep linking to patient details via `router.push()`. `usePushNotifications` hook in root layout handles registration and navigation. Badge count management on iOS. Notifications include patient_id in data payload for navigation.
+**Push Notifications:** Expo Notifications configured in `/lib/push-notifications.ts`. Token registration on auth via `registerForPushNotifications()` and `sendPushToken()`. `usePushNotifications` hook (in root layout) handles: foreground notifications (invalidates queries, updates badge), tap handling (navigates to patient, clears badge), and React Query integration. Supports all 10 notification types. Badge count management on iOS. Notifications include patient_id in data payload for navigation.
 
 **Accessibility:** High contrast mode via `AccessibilityProvider` context. Three theme variants: light, dark, highContrast (defined in `/constants/theme.ts`). Font scaling multiplier (2.0x) for visually impaired users. Accessibility state persisted in SecureStore/localStorage.
 
@@ -58,7 +59,7 @@ No test framework is configured yet.
 - **IOL Calculator** (`/lib/iol.ts`): Calculates intraocular lens power using SRKT, Haigis, or Hoffer Q formulas. Requires axial length, keratometry values, optional ACD and target refraction. Stores calculation history per patient with warnings for out-of-range values.
 - **Checklists** (`/lib/checklists.ts`): Pre-surgery checklist system with status tracking (PENDING, IN_PROGRESS, COMPLETED, REJECTED, EXPIRED). Progress calculation for required vs optional items. Items can be updated by doctors and reviewed by surgeons.
 - **Comments** (`/lib/comments.ts`): Threaded comment system with urgent flag and read status. Used for doctor-patient communication. Unread count tracked per user.
-- **Notifications** (`/lib/notifications.ts`): Read-only notification system for patients. Displays status changes, doctor assignments, surgery scheduling, and other patient data updates. Frontend can read and mark as read, but **cannot create notifications** (requires backend implementation). See `/docs/NOTIFICATIONS_API_SPEC.md` for backend requirements.
+- **Notifications** (`/lib/notifications.ts`, `/hooks/useNotifications.ts`): Notification system with 10 types (status_change, doctor_assigned, surgeon_assigned, surgery_scheduled, diagnosis_set, operation_type_set, comment, checklist_update, iol_calculation, media_uploaded). API functions: `getNotifications()`, `getUnreadCount()`, `markAsRead()`, `markAllAsRead()`. `useNotifications` hook provides React Query integration with auto-refresh every 30s for unread count. UI features: type-specific icons, navigation to patient on tap, badge on tab bar, pull-to-refresh. Frontend is read-only (cannot create notifications - requires backend). See `/docs/NOTIFICATIONS_API_SPEC.md` for backend requirements.
 - **Print/PDF** (`/lib/print.ts`): Generates PDF documents (routing sheets, checklist reports) via backend. Returns Blob for download/sharing. Platform-specific download handlers in `/utils/pdf-download.ts` (web: creates download link, mobile: saves to FileSystem and uses Sharing API).
 - **Districts** (`/lib/districts.ts`): Geographic organization of patients. District doctors are assigned to specific districts.
 - **Surgeries** (`/lib/surgeries.ts`): Surgery scheduling and management. Links to patients with surgery dates.
@@ -71,8 +72,9 @@ No test framework is configured yet.
 - TabView component used for organizing multi-section screens (see patient detail screen for reference)
 - ActionSheet pattern for contextual menus (used for PDF downloads, status changes, etc.)
 - FloatingTabBar is custom implementation with blur effect and animations (not default Expo Router tab bar)
+- Notification icons mapped in `icon-symbol.tsx` for all 10 types: status_change (sync), doctor_assigned (person-add), surgeon_assigned (medical-services), surgery_scheduled (schedule), diagnosis_set (pageview), operation_type_set (local-hospital), comment (chat), checklist_update (checklist), iol_calculation (functions), media_uploaded (upload-file)
 
-**Custom Hooks Pattern:** Domain logic encapsulated in hooks (`/hooks/`): `usePatientDetail`, `useComments`, `useChecklist`, `useIOLCalculator`, `useMediaUpload`, `usePDFDownload`, `useModeration`, `useOfflineSync`, `usePushNotifications`. All use React Query for server state with mutations returning `{ mutate, isLoading, error }` and queries returning `{ data, isLoading, error }`.
+**Custom Hooks Pattern:** Domain logic encapsulated in hooks (`/hooks/`): `usePatientDetail`, `useComments`, `useChecklist`, `useIOLCalculator`, `useMediaUpload`, `usePDFDownload`, `useModeration`, `useOfflineSync`, `usePushNotifications`, `useNotifications`. All use React Query for server state with mutations returning `{ mutate, isLoading, error }` and queries returning `{ data, isLoading, error }`. `useNotifications` returns: `notifications` array, `unreadCount`, `markAsRead()`, `markAllAsRead()`, loading states, with 30s stale time and auto-refresh for unread count.
 
 **Provider Hierarchy (root layout):** QueryClientProvider → AccessibilityProvider → AuthProvider → ThemeProvider → ToastProvider → RootNavigator. Auth and accessibility providers show loading spinner while checking stored tokens/settings before rendering routes. `useProtectedRoute` hook in RootNavigator handles auth-based redirects.
 

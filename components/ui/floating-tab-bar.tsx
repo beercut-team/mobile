@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/theme';
 import { useAccessibility } from '@/contexts/accessibility-context';
 import { useAuth } from '@/contexts/auth-context';
+import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -72,9 +73,19 @@ export function FloatingTabBar({
   const { isAccessibilityMode } = useAccessibility();
   const { hasRole } = useAuth();
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
+  const horizontalPadding = useAccessibilityFontSize(16);
+  const tabBarRadius = useAccessibilityFontSize(24);
+  const tabBarPadding = useAccessibilityFontSize(7);
+  const tabGap = useAccessibilityFontSize(4);
 
   const canViewPatients = hasRole('DISTRICT_DOCTOR', 'SURGEON', 'ADMIN');
   const canModerate = hasRole('SURGEON', 'ADMIN');
+  const currentRouteName = state.routes[state.index]?.name ?? state.routes[0]?.name ?? '';
+
+  // Hide tab bar on deep patient details to prevent overlap with bottom content.
+  if (currentRouteName.startsWith('patients/')) {
+    return null;
+  }
 
   const visibleTabNames = canModerate
     ? ['index', 'patients', 'moderation', 'more']
@@ -89,7 +100,6 @@ export function FloatingTabBar({
   if (!visibleRoutes.length) return null;
 
   const visibleRouteNames = new Set(visibleRoutes.map((route) => route.name));
-  const currentRouteName = state.routes[state.index]?.name ?? visibleRoutes[0].name;
   const activeRouteName = resolveActiveRouteName(
     currentRouteName,
     visibleRouteNames,
@@ -115,6 +125,7 @@ export function FloatingTabBar({
         styles.container,
         {
           paddingBottom: Math.max(insets.bottom, 10),
+          paddingHorizontal: horizontalPadding,
         },
       ]}
       pointerEvents="box-none"
@@ -127,10 +138,13 @@ export function FloatingTabBar({
           {
             backgroundColor: isAccessibilityMode ? colors.card : 'rgba(255,255,255,0.02)',
             borderColor,
+            borderRadius: tabBarRadius,
+            paddingVertical: tabBarPadding,
+            paddingHorizontal: tabBarPadding,
           },
         ]}
       >
-        <View style={styles.tabsRow}>
+        <View style={[styles.tabsRow, { gap: tabGap }]}>
           {visibleRoutes.map((route) => {
             const options = descriptors[route.key]?.options as TabBarOptions;
             const isFocused = route.name === activeRouteName;
@@ -204,6 +218,14 @@ function TabButton({
 }: TabButtonProps) {
   const scale = useSharedValue(1);
   const isDark = theme === 'dark';
+  const iconSize = useAccessibilityFontSize(20);
+  const labelSize = useAccessibilityFontSize(11);
+  const labelLineHeight = Math.round(labelSize * 1.15);
+  const innerMinHeight = useAccessibilityFontSize(54);
+  const innerPaddingVertical = useAccessibilityFontSize(7);
+  const innerPaddingHorizontal = useAccessibilityFontSize(8);
+  const innerRadius = useAccessibilityFontSize(17);
+  const innerGap = useAccessibilityFontSize(4);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -264,17 +286,31 @@ function TabButton({
       accessibilityLabel={label}
       testID={testID}
     >
-      <View style={[styles.tabInner, activeCapsuleStyle]}>
-        {renderIcon?.({ color, size: 20, focused: isFocused })}
+      <View
+        style={[
+          styles.tabInner,
+          {
+            minHeight: innerMinHeight,
+            paddingVertical: innerPaddingVertical,
+            paddingHorizontal: innerPaddingHorizontal,
+            borderRadius: innerRadius,
+            gap: innerGap,
+          },
+          activeCapsuleStyle,
+        ]}
+      >
+        {renderIcon?.({ color, size: iconSize, focused: isFocused })}
         <Text
           style={[
             styles.label,
             {
               color,
+              fontSize: labelSize,
+              lineHeight: labelLineHeight,
               fontWeight: isFocused ? '600' : '500',
             },
           ]}
-          numberOfLines={1}
+          numberOfLines={isAccessibilityMode ? 2 : 1}
         >
           {label}
         </Text>
@@ -289,16 +325,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 16,
     alignItems: 'center',
   },
   tabBar: {
     width: '100%',
     maxWidth: 560,
     overflow: 'hidden',
-    borderRadius: 24,
-    paddingVertical: 7,
-    paddingHorizontal: 7,
     borderWidth: 0.5,
     ...Platform.select({
       ios: {
@@ -321,7 +353,6 @@ const styles = StyleSheet.create({
   },
   tabsRow: {
     flexDirection: 'row',
-    gap: 4,
   },
   tab: {
     flex: 1,
@@ -330,15 +361,10 @@ const styles = StyleSheet.create({
   tabInner: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 54,
-    paddingVertical: 7,
-    paddingHorizontal: 8,
-    borderRadius: 17,
-    gap: 4,
   },
   label: {
-    fontSize: 11,
     textAlign: 'center',
     letterSpacing: -0.1,
+    includeFontPadding: false,
   },
 });
