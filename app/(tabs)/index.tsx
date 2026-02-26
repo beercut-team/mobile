@@ -16,6 +16,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
 import { getDashboard, getPatient, getPatients, STATUS_LABELS, OPERATION_LABELS, EYE_LABELS, type PatientStatus } from '@/lib/patients';
 import { getUnreadCount } from '@/lib/notifications';
+import { getPatientChecklist, getChecklistProgress, CHECKLIST_STATUS_LABELS } from '@/lib/checklists';
 
 const ROLE_LABELS: Record<string, string> = {
   DISTRICT_DOCTOR: 'Районный врач',
@@ -68,6 +69,18 @@ export default function HomeScreen() {
     queryKey: ['patient', user?.id],
     queryFn: () => getPatient(user!.id),
     enabled: isPatient && !!user?.id,
+  });
+
+  const { data: checklistData, isLoading: checklistLoading } = useQuery({
+    queryKey: ['checklist', patientData?.data?.id],
+    queryFn: () => getPatientChecklist(patientData!.data.id),
+    enabled: isPatient && !!patientData?.data?.id,
+  });
+
+  const { data: progressData } = useQuery({
+    queryKey: ['checklist-progress', patientData?.data?.id],
+    queryFn: () => getChecklistProgress(patientData!.data.id),
+    enabled: isPatient && !!patientData?.data?.id,
   });
 
   const { data: recentPatients, isLoading: recentLoading, refetch: refetchRecent } = useQuery({
@@ -348,6 +361,49 @@ export default function HomeScreen() {
                         </ThemedText>
                       </View>
                     </>
+                  )}
+                </Card>
+
+                {/* Checklist Card */}
+                <Card style={styles.medicalCard}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <ThemedText type="subtitle">Чек-лист подготовки</ThemedText>
+                    {progressData?.data && (
+                      <ThemedText style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                        {progressData.data.completed}/{progressData.data.total}
+                      </ThemedText>
+                    )}
+                  </View>
+
+                  {checklistLoading && <ActivityIndicator size="small" color={colors.primary} />}
+
+                  {!checklistLoading && checklistData?.data && checklistData.data.length === 0 && (
+                    <ThemedText style={{ color: colors.mutedForeground, textAlign: 'center', paddingVertical: 12 }}>
+                      Чек-лист пока не создан
+                    </ThemedText>
+                  )}
+
+                  {!checklistLoading && checklistData?.data && checklistData.data.slice(0, 5).map((item, index) => (
+                    <View key={item.id}>
+                      {index > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
+                      <View style={styles.infoRow}>
+                        <ThemedText style={[styles.infoLabel, { color: colors.mutedForeground }]}>
+                          {item.name}
+                        </ThemedText>
+                        <ThemedText style={[styles.infoValue, {
+                          color: item.status === 'COMPLETED' ? '#10B981' : colors.mutedForeground,
+                          fontWeight: '500'
+                        }]}>
+                          {CHECKLIST_STATUS_LABELS[item.status]}
+                        </ThemedText>
+                      </View>
+                    </View>
+                  ))}
+
+                  {checklistData?.data && checklistData.data.length > 5 && (
+                    <ThemedText style={{ color: colors.primary, textAlign: 'center', marginTop: 12, fontSize: 13 }}>
+                      +{checklistData.data.length - 5} ещё
+                    </ThemedText>
                   )}
                 </Card>
               </>
