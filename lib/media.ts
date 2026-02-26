@@ -1,6 +1,9 @@
-import { apiFetch, API_BASE_URL } from './api';
+import { apiFetch, API_BASE_URL, fetchWithTimeout } from './api';
 import type { ApiResponse } from './auth';
 import { getTokens } from './token-storage';
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
 
 export interface Media {
   id: number;
@@ -23,6 +26,26 @@ export interface UploadMediaRequest {
   metadata?: Record<string, any>;
 }
 
+export function validateFile(file: File | Blob): { valid: boolean; error?: string } {
+  // Check file size
+  if (file.size > MAX_FILE_SIZE) {
+    return {
+      valid: false,
+      error: `Размер файла не должен превышать 20 МБ (текущий размер: ${(file.size / 1024 / 1024).toFixed(1)} МБ)`,
+    };
+  }
+
+  // Check MIME type
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    return {
+      valid: false,
+      error: 'Допустимые форматы: JPEG, PNG, GIF, PDF',
+    };
+  }
+
+  return { valid: true };
+}
+
 export async function uploadMedia(data: UploadMediaRequest): Promise<ApiResponse<Media>> {
   const tokens = await getTokens();
   const formData = new FormData();
@@ -36,7 +59,7 @@ export async function uploadMedia(data: UploadMediaRequest): Promise<ApiResponse
     formData.append('metadata', JSON.stringify(data.metadata));
   }
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/media/upload`, {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/api/v1/media/upload`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${tokens?.accessToken}`,

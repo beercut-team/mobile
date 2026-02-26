@@ -18,6 +18,8 @@ import { PassportDataSection } from '@/components/patient/PassportDataSection';
 import { ChecklistItem } from '@/components/patient/ChecklistItem';
 import { CommentThread } from '@/components/patient/CommentThread';
 import { IOLCalculatorForm } from '@/components/patient/IOLCalculatorForm';
+import { MedicalMetadataSection } from '@/components/medical/MedicalMetadataSection';
+import { MedicalMetadataForm } from '@/components/medical/MedicalMetadataForm';
 import { TabView, type Tab } from '@/components/ui/tab-view';
 import { Button } from '@/components/ui/button';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -26,7 +28,7 @@ import { Modal } from '@/components/ui/modal';
 import { FileUpload } from '@/components/ui/FileUpload';
 
 export default function PatientDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, tab } = useLocalSearchParams<{ id: string; tab?: string }>();
   const router = useRouter();
   const theme = useColorScheme() ?? 'light';
   const { isAccessibilityMode } = useAccessibility();
@@ -34,10 +36,13 @@ export default function PatientDetailScreen() {
   const insets = useSafeAreaInsets();
   const padding = useAccessibilityFontSize(16);
   const actionsRadius = useAccessibilityFontSize(16);
+  const actionTextSize = useAccessibilityFontSize(17);
+  const actionIconSize = useAccessibilityFontSize(15);
+  const actionMinHeight = useAccessibilityFontSize(50);
 
   const patientId = parseInt(id, 10);
 
-  const { patient, isLoading: patientLoading, error: patientError } = usePatientDetail(patientId);
+  const { patient, isLoading: patientLoading, error: patientError, refetch: refetchPatient } = usePatientDetail(patientId);
   const { checklist, updateItem, progress, isLoading: checklistLoading } = useChecklist(patientId);
   const { comments, addComment, unreadCount, isLoading: commentsLoading } = useComments(patientId);
   const { media, upload, deleteMedia } = useMediaUpload(patientId);
@@ -47,6 +52,7 @@ export default function PatientDetailScreen() {
   const [showPDFMenu, setShowPDFMenu] = useState(false);
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [selectedChecklistItem, setSelectedChecklistItem] = useState<number | null>(null);
+  const [medicalMetadataModalVisible, setMedicalMetadataModalVisible] = useState(false);
 
   if (patientLoading) {
     return (
@@ -66,7 +72,7 @@ export default function PatientDetailScreen() {
         <Text style={[styles.errorText, { color: colors.text }]}>
           Ошибка загрузки данных пациента
         </Text>
-        <Button onPress={() => router.back()}>Назад</Button>
+        <Button onPress={() => router.push('/(tabs)/patients')}>Назад</Button>
       </View>
     );
   }
@@ -131,6 +137,18 @@ export default function PatientDetailScreen() {
     });
   };
 
+  const handleSaveMedicalMetadata = async (metadata: any) => {
+    try {
+      // TODO: Implement updateMedicalMetadata API call
+      // await updateMedicalMetadata(patientId, metadata);
+      console.log('Saving medical metadata:', metadata);
+      setMedicalMetadataModalVisible(false);
+      refetchPatient();
+    } catch (error) {
+      console.error('Error saving medical metadata:', error);
+    }
+  };
+
   const patientName = `${patient.last_name}_${patient.first_name}`;
 
   const pdfActions: ActionSheetAction[] = [
@@ -149,7 +167,7 @@ export default function PatientDetailScreen() {
   const tabs: Tab[] = [
     {
       key: 'checklist',
-      title: 'Чеклист',
+      title: 'Чек-лист',
       content: (
         <ScrollView
           style={[styles.tabContent, { backgroundColor: colors.background }]}
@@ -210,7 +228,7 @@ export default function PatientDetailScreen() {
     },
     {
       key: 'comments',
-      title: `Комментарии${unreadCount > 0 ? ` (${unreadCount})` : ''}`,
+      title: `Комменты${unreadCount > 0 ? ` (${unreadCount})` : ''}`,
       content: (
         <CommentThread
           comments={comments || []}
@@ -221,7 +239,7 @@ export default function PatientDetailScreen() {
     },
     {
       key: 'iol',
-      title: 'Расчёт ИОЛ',
+      title: 'ИОЛ',
       content: (
         <View style={styles.tabContent}>
           <IOLCalculatorForm
@@ -260,6 +278,8 @@ export default function PatientDetailScreen() {
     },
   ];
 
+  const initialTab = tab && tabs.some((t) => t.key === tab) ? tab : undefined;
+
   return (
     <>
       <Stack.Screen
@@ -270,16 +290,20 @@ export default function PatientDetailScreen() {
         }}
       />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <ScrollView contentContainerStyle={styles.mainContent}>
+        <View style={styles.mainContent}>
           <PatientHeader
             patient={patient}
             progress={progress}
             topInset={insets.top + 8}
-            onBack={() => router.back()}
+            onBack={() => router.push('/(tabs)/patients')}
           />
 
           <View style={[styles.section, { paddingHorizontal: padding }]}>
             <PassportDataSection patient={patient} />
+          </View>
+
+          <View style={[styles.section, { paddingHorizontal: padding }]}>
+            <MedicalMetadataSection patient={patient} onRefresh={refetchPatient} />
           </View>
 
           <View
@@ -287,7 +311,6 @@ export default function PatientDetailScreen() {
               styles.actionsCard,
               {
                 backgroundColor: colors.card,
-                borderColor: colors.border,
                 borderRadius: actionsRadius,
                 marginHorizontal: padding,
               },
@@ -295,23 +318,76 @@ export default function PatientDetailScreen() {
           >
             <Text style={[styles.actionsTitle, { color: colors.text }]}>Действия</Text>
             <View style={styles.actionsSection}>
-              <Button variant="outline" onPress={() => console.log('Edit')} style={styles.actionButton}>
-                Редактировать
-              </Button>
-              <Button
-                variant="outline"
-                onPress={() => setShowPDFMenu(true)}
-                loading={isDownloading}
-                disabled={isDownloading}
-                style={styles.actionButton}
+              <Pressable
+                onPress={() => console.log('Edit')}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  {
+                    minHeight: actionMinHeight,
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                  },
+                  pressed && styles.actionPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Редактировать"
               >
-                Скачать PDF
-              </Button>
+                <IconSymbol name="square.and.pencil" size={actionIconSize} color={colors.primary} />
+                <Text style={[styles.actionButtonText, { color: colors.text, fontSize: actionTextSize }]}>
+                  Редактировать
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setMedicalMetadataModalVisible(true)}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  {
+                    minHeight: actionMinHeight,
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                  },
+                  pressed && styles.actionPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Медицинские коды"
+              >
+                <IconSymbol name="function" size={actionIconSize} color={colors.primary} />
+                <Text style={[styles.actionButtonText, { color: colors.text, fontSize: actionTextSize }]}>
+                  Медицинские коды
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setShowPDFMenu(true)}
+                disabled={isDownloading}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  {
+                    minHeight: actionMinHeight,
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    opacity: isDownloading ? 0.6 : 1,
+                  },
+                  pressed && styles.actionPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Скачать PDF"
+              >
+                {isDownloading ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <IconSymbol name="doc.text.fill" size={actionIconSize} color={colors.primary} />
+                )}
+                <Text style={[styles.actionButtonText, { color: colors.text, fontSize: actionTextSize }]}>
+                  Скачать PDF
+                </Text>
+              </Pressable>
             </View>
           </View>
-        </ScrollView>
+        </View>
 
-        <TabView tabs={tabs} />
+        <TabView tabs={tabs} initialTab={initialTab} />
       </View>
 
       <ActionSheet
@@ -329,6 +405,18 @@ export default function PatientDetailScreen() {
         title="Загрузить файл"
       >
         <FileUpload onUpload={handleFileUpload} accept="all" />
+      </Modal>
+
+      <Modal
+        visible={medicalMetadataModalVisible}
+        onClose={() => setMedicalMetadataModalVisible(false)}
+        title="Медицинские коды"
+      >
+        <MedicalMetadataForm
+          patient={patient}
+          onSave={handleSaveMedicalMetadata}
+          onCancel={() => setMedicalMetadataModalVisible(false)}
+        />
       </Modal>
     </>
   );
@@ -361,7 +449,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   actionsCard: {
-    borderWidth: 1,
+    borderWidth: 0,
     padding: 12,
     marginBottom: 12,
     gap: 10,
@@ -372,11 +460,22 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   actionsSection: {
-    flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   actionButton: {
-    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  actionButtonText: {
+    fontWeight: '600',
+  },
+  actionPressed: {
+    opacity: 0.78,
   },
   tabContent: {
     flex: 1,

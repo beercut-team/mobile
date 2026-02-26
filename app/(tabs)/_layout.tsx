@@ -74,7 +74,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="more"
         options={{
-          title: 'Ещё',
+          title: 'Подробности',
           tabBarIcon: ({ color, size }) => <IconSymbol size={size ?? 24} name="ellipsis.circle.fill" color={color} />,
           href: undefined,
         }}

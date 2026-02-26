@@ -4,6 +4,27 @@ import { Platform } from 'react-native';
 
 import { downloadRoutingSheet, downloadChecklistReport } from '@/lib/print';
 
+function sanitizeFilenamePart(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[^\w.-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 48) || 'file';
+}
+
+async function blobToBytes(blob: Blob): Promise<Uint8Array> {
+  const blobWithBytes = blob as Blob & { bytes?: () => Promise<Uint8Array> };
+  if (typeof blobWithBytes.bytes === 'function') {
+    return blobWithBytes.bytes();
+  }
+
+  if (typeof blob.arrayBuffer === 'function') {
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+
+  throw new Error('Unsupported blob implementation');
+}
+
 /**
  * Download and save PDF file on mobile devices
  */
@@ -15,12 +36,10 @@ async function downloadPDFMobile(
     // Create file in document directory
     const file = new File(Paths.document, filename);
 
-    // Convert blob to array buffer
-    const arrayBuffer = await blob.arrayBuffer();
-
-    // Write to file
-    await file.create();
-    await file.write(new Uint8Array(arrayBuffer));
+    // Convert response blob to raw bytes and save it atomically.
+    const bytes = await blobToBytes(blob);
+    file.create({ overwrite: true, intermediates: true });
+    file.write(bytes);
 
     // Share/open the file
     if (await Sharing.isAvailableAsync()) {
@@ -31,7 +50,8 @@ async function downloadPDFMobile(
       });
     }
   } catch (error) {
-    throw new Error('Failed to save PDF file');
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to save PDF file: ${reason}`);
   }
 }
 
@@ -57,7 +77,7 @@ export async function downloadPatientRoutingSheet(
   patientName: string
 ): Promise<void> {
   const blob = await downloadRoutingSheet(patientId);
-  const filename = `routing-sheet-${patientName}-${Date.now()}.pdf`;
+  const filename = `routing-sheet-${sanitizeFilenamePart(patientName)}-${Date.now()}.pdf`;
 
   if (Platform.OS === 'web') {
     downloadPDFWeb(blob, filename);
@@ -74,7 +94,7 @@ export async function downloadPatientChecklistReport(
   patientName: string
 ): Promise<void> {
   const blob = await downloadChecklistReport(patientId);
-  const filename = `checklist-report-${patientName}-${Date.now()}.pdf`;
+  const filename = `checklist-report-${sanitizeFilenamePart(patientName)}-${Date.now()}.pdf`;
 
   if (Platform.OS === 'web') {
     downloadPDFWeb(blob, filename);

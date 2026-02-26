@@ -23,6 +23,7 @@ const MAPPING = {
   'xmark.circle.fill': 'cancel',
   'ellipsis.circle.fill': 'more-horiz',
   'checkmark': 'check',
+  'square.and.pencil': 'edit',
   'checkmark.circle.fill': 'check-circle',
   'checkmark.seal.fill': 'verified',
   'arrow.uturn.backward.circle.fill': 'undo',

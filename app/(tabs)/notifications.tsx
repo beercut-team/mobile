@@ -18,21 +18,8 @@ import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
 import { useNotifications } from '@/hooks/useNotifications';
-import type { Notification, NotificationType } from '@/lib/notifications';
-
-// Icon mapping for notification types
-const NOTIFICATION_ICONS: Record<NotificationType, Parameters<typeof IconSymbol>[0]['name']> = {
-  status_change: 'arrow.triangle.2.circlepath',
-  doctor_assigned: 'person.badge.plus',
-  surgeon_assigned: 'stethoscope',
-  surgery_scheduled: 'calendar.badge.clock',
-  diagnosis_set: 'doc.text.magnifyingglass',
-  operation_type_set: 'cross.case',
-  comment: 'bubble.left.and.bubble.right',
-  checklist_update: 'checklist',
-  iol_calculation: 'function',
-  media_uploaded: 'doc.badge.arrow.up',
-};
+import type { Notification } from '@/lib/notifications';
+import { getNotificationIcon } from '@/lib/notifications';
 
 export default function NotificationsScreen() {
   const { isAccessibilityMode } = useAccessibility();
@@ -40,6 +27,7 @@ export default function NotificationsScreen() {
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const tabBarClearance = Math.max(156, insets.bottom + 126);
 
   const titleSize = useAccessibilityFontSize(28);
   const notifTitleSize = useAccessibilityFontSize(15);
@@ -56,6 +44,7 @@ export default function NotificationsScreen() {
   const {
     notifications,
     isLoading,
+    error,
     refetch,
     markAsRead,
     markAllAsRead,
@@ -67,6 +56,27 @@ export default function NotificationsScreen() {
   const onRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
+
+  // Error state
+  if (error && !isLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+          <ThemedText type="title" style={[styles.title, { fontSize: titleSize }]}>
+            Уведомления
+          </ThemedText>
+        </View>
+        <View style={styles.errorContainer}>
+          <ThemedText style={[styles.errorText, { color: colors.destructive, fontSize: emptyTextSize }]}>
+            Ошибка загрузки уведомлений
+          </ThemedText>
+          <Button onPress={() => refetch()} style={styles.retryButton}>
+            Повторить
+          </Button>
+        </View>
+      </ThemedView>
+    );
+  }
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -89,14 +99,14 @@ export default function NotificationsScreen() {
       markAsRead(notification.id);
     }
 
-    // Navigate to patient detail if patient_id exists
-    if (notification.patient_id) {
-      router.push(`/(tabs)/patients/${notification.patient_id}` as any);
+    // Navigate to patient detail if entity_id exists
+    if (notification.entity_id) {
+      router.push(`/(tabs)/patients/${notification.entity_id}` as any);
     }
   };
 
   const renderNotification = ({ item }: { item: Notification }) => {
-    const iconName = NOTIFICATION_ICONS[item.type] || 'bell.fill';
+    const iconName = getNotificationIcon(item.type);
 
     return (
       <Pressable
@@ -115,7 +125,7 @@ export default function NotificationsScreen() {
       >
         <View style={styles.notifRow}>
           <View style={[styles.iconContainer, { width: iconSize + 16, height: iconSize + 16, borderRadius: (iconSize + 16) / 2, backgroundColor: colors.primary + '15' }]}>
-            <IconSymbol name={iconName} size={iconSize} color={colors.primary} />
+            <IconSymbol name={iconName as any} size={iconSize} color={colors.primary} />
           </View>
           <View style={styles.notifContent}>
             <View style={styles.notifHeader}>
@@ -123,14 +133,17 @@ export default function NotificationsScreen() {
                 {item.title}
               </ThemedText>
               {!item.is_read && (
-                <View style={[styles.unreadDot, { backgroundColor: colors.primary, width: unreadDotSize, height: unreadDotSize, borderRadius: unreadDotSize / 2 }]} />
+                <View
+                  style={[styles.unreadDot, { backgroundColor: colors.primary, width: unreadDotSize, height: unreadDotSize, borderRadius: unreadDotSize / 2 }]}
+                  accessibilityLabel="Непрочитанное уведомление"
+                />
               )}
             </View>
             <ThemedText
               style={[styles.notifMessage, { color: colors.mutedForeground, fontSize: notifMessageSize }]}
               numberOfLines={2}
             >
-              {item.message}
+              {item.body}
             </ThemedText>
             <ThemedText style={[styles.notifDate, { color: colors.mutedForeground, fontSize: notifDateSize }]}>
               {formatDate(item.created_at)}
@@ -163,7 +176,7 @@ export default function NotificationsScreen() {
         data={notifications}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderNotification}
-        contentContainerStyle={[styles.list, { paddingBottom: 120 }]}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarClearance }]}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
@@ -248,4 +261,17 @@ const styles = StyleSheet.create({
     paddingVertical: 80,
   },
   emptyText: {},
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  retryButton: {
+    minWidth: 120,
+  },
 });

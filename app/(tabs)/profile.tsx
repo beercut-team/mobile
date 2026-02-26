@@ -65,7 +65,7 @@ export default function ProfileScreen() {
   const activeTagPaddingH = useAccessibilityFontSize(10);
   const activeTagPaddingV = useAccessibilityFontSize(4);
   const activeTagRadius = useAccessibilityFontSize(10);
-  const tabBarClearance = Math.max(136, insets.bottom + 108);
+  const tabBarClearance = Math.max(156, insets.bottom + 126);
   const logoutButtonLift = useAccessibilityFontSize(10);
 
   const roleColor = ROLE_COLORS[user?.role ?? ''] ?? colors.primary;

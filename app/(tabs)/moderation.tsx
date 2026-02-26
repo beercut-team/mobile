@@ -27,13 +27,13 @@ import { useModeration } from '@/hooks/useModeration';
 import type { Patient } from '@/lib/patients';
 
 export default function ModerationScreen() {
-  const { patients, approve, reject, isLoading } = useModeration();
+  const { patients, approve, reject, isLoading, isApproving, isRejecting } = useModeration();
   const theme = useColorScheme() ?? 'light';
   const { isAccessibilityMode } = useAccessibility();
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
   const fontSize = useAccessibilityFontSize(14);
-  const tabBarClearance = Math.max(136, insets.bottom + 108);
+  const tabBarClearance = Math.max(156, insets.bottom + 126);
   const rejectSheetLift = Math.max(useAccessibilityFontSize(96), insets.bottom + 72);
   const rejectSheetPadding = useAccessibilityFontSize(20);
   const rejectSheetRadius = useAccessibilityFontSize(24);
@@ -74,9 +74,15 @@ export default function ModerationScreen() {
   const handleRejectSubmit = () => {
     if (!selectedPatient) return;
 
+    // Validate reject reason is required
+    if (!rejectComment.trim()) {
+      Alert.alert('Ошибка', 'Укажите причину отклонения');
+      return;
+    }
+
     reject({
       patientId: selectedPatient.id,
-      comment: rejectComment.trim() || undefined,
+      comment: rejectComment.trim(),
     });
 
     setShowRejectModal(false);
@@ -115,6 +121,8 @@ export default function ModerationScreen() {
             handleApprove();
           }}
           style={styles.approveButton}
+          loading={isApproving}
+          disabled={isApproving || isRejecting}
         >
           Одобрить
         </Button>
@@ -125,6 +133,8 @@ export default function ModerationScreen() {
             handleRejectStart();
           }}
           style={styles.rejectButton}
+          loading={isRejecting}
+          disabled={isApproving || isRejecting}
         >
           Отклонить
         </Button>

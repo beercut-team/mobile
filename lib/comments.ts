@@ -1,10 +1,11 @@
 import { apiFetch } from './api';
-import type { ApiResponse } from './auth';
+import type { ApiResponse, UserResponse } from './auth';
 
 export interface Comment {
   id: number;
   patient_id: number;
   author_id: number;
+  author?: UserResponse; // Backend returns full author object
   parent_id?: number | null;
   body: string;
   is_urgent: boolean;

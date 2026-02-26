@@ -3,19 +3,10 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { apiFetch } from './api';
+import type { NotificationType } from './notifications';
 
 export interface PushNotificationData {
-  type:
-    | 'status_change'
-    | 'doctor_assigned'
-    | 'surgeon_assigned'
-    | 'surgery_scheduled'
-    | 'diagnosis_set'
-    | 'operation_type_set'
-    | 'comment'
-    | 'checklist_update'
-    | 'iol_calculation'
-    | 'media_uploaded';
+  type: NotificationType;
   patient_id?: number;
   title: string;
   body: string;

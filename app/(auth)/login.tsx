@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Link } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useAccessibility } from '@/contexts/accessibility-context';
@@ -28,6 +29,7 @@ export default function PatientLoginScreen() {
   const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
+  const insets = useSafeAreaInsets();
 
   const titleSize = useAccessibilityFontSize(28);
   const subtitleSize = useAccessibilityFontSize(16);
@@ -73,6 +75,9 @@ export default function PatientLoginScreen() {
     mutationFn: () => loginWithCode(accessCode.trim()),
   });
 
+  const contentPaddingTop = Math.max(insets.top + 18, 28);
+  const contentPaddingBottom = Math.max(insets.bottom + 20, 28);
+
   const handleLogin = () => {
     if (!validate()) return;
     mutation.reset();
@@ -85,7 +90,10 @@ export default function PatientLoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
@@ -152,8 +160,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 24,
   },
   header: {
     marginBottom: 20,

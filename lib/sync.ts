@@ -15,6 +15,11 @@ export interface SyncPushRequest {
   mutations: SyncMutation[];
 }
 
+export interface SyncPushResponse {
+  successful: string[];
+  failed: string[];
+}
+
 export interface SyncChange {
   [key: string]: any;
 }
@@ -24,11 +29,12 @@ export interface SyncPullResponse {
   since: string;
 }
 
-export async function pushSync(data: SyncPushRequest): Promise<void> {
-  await apiFetch('/api/v1/sync/push', {
+export async function pushSync(data: SyncPushRequest): Promise<SyncPushResponse> {
+  const response = await apiFetch<ApiResponse<SyncPushResponse>>('/api/v1/sync/push', {
     method: 'POST',
     body: JSON.stringify(data),
   });
+  return response.data;
 }
 
 export async function pullSync(since: string): Promise<ApiResponse<SyncPullResponse>> {

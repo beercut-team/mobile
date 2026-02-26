@@ -53,7 +53,6 @@ export function PatientHeader({ patient, progress, topInset = 0, onBack }: Patie
           styles.card,
           {
             backgroundColor: colors.card,
-            borderColor: colors.border,
             borderRadius: cardRadius,
             padding: cardPadding,
           },
@@ -125,7 +124,6 @@ export function PatientHeader({ patient, progress, topInset = 0, onBack }: Patie
             {
               backgroundColor: colors.muted,
               borderRadius: progressCardRadius,
-              borderColor: colors.border,
             },
           ]}
         >
@@ -163,18 +161,19 @@ export function PatientHeader({ patient, progress, topInset = 0, onBack }: Patie
 const styles = StyleSheet.create({
   shell: {},
   card: {
-    borderWidth: 1,
+    borderWidth: 0,
     gap: 14,
   },
   toolbar: {
-    flexDirection: 'column',
-    gap: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
   },
   backButton: {
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    alignSelf: 'flex-start',
   },
   identity: {
     gap: 2,
@@ -189,7 +188,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   progressCard: {
-    borderWidth: 1,
+    borderWidth: 0,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },

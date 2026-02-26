@@ -38,6 +38,7 @@ export default function HomeScreen() {
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
+  const tabBarClearance = Math.max(156, insets.bottom + 126);
 
   const greetingSize = useAccessibilityFontSize(15);
   const roleTextSize = useAccessibilityFontSize(12);
@@ -46,12 +47,9 @@ export default function HomeScreen() {
   const statLabelSize = useAccessibilityFontSize(12);
   const statCountLineHeight = Math.round(statCountSize * 1.15);
   const statLabelLineHeight = Math.round(statLabelSize * 1.25);
-  const actionIconSize = useAccessibilityFontSize(24);
-  const actionLabelSize = useAccessibilityFontSize(13);
   const dotSize = useAccessibilityFontSize(8);
   const rolePadding = useAccessibilityFontSize(12);
   const borderRadius = useAccessibilityFontSize(12);
-  const actionIconContainerSize = useAccessibilityFontSize(48);
 
   const showDashboard = hasRole('DISTRICT_DOCTOR', 'SURGEON', 'ADMIN');
   const isPatient = hasRole('PATIENT');
@@ -87,7 +85,7 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: 120 }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: tabBarClearance }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -173,33 +171,6 @@ export default function HomeScreen() {
                   </Card>
                 );
               })}
-            </View>
-          </View>
-        )}
-
-        {/* Quick Actions */}
-        {showDashboard && (
-          <View style={styles.section}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              Быстрые действия
-            </ThemedText>
-            <View style={styles.actionsRow}>
-              <Card
-                style={[styles.actionCard, { borderColor: colors.primary + '30' }]}
-              >
-                <View style={[styles.actionIcon, { backgroundColor: colors.primary + '15', width: actionIconContainerSize, height: actionIconContainerSize, borderRadius: actionIconContainerSize / 3 }]}>
-                  <ThemedText style={{ fontSize: actionIconSize }}>+</ThemedText>
-                </View>
-                <ThemedText style={[styles.actionLabel, { fontSize: actionLabelSize }]}>Новый пациент</ThemedText>
-              </Card>
-              <Card
-                style={[styles.actionCard, { borderColor: '#8B5CF6' + '30' }]}
-              >
-                <View style={[styles.actionIcon, { backgroundColor: '#8B5CF6' + '15', width: actionIconContainerSize, height: actionIconContainerSize, borderRadius: actionIconContainerSize / 3 }]}>
-                  <ThemedText style={{ fontSize: actionIconSize }}>?</ThemedText>
-                </View>
-                <ThemedText style={[styles.actionLabel, { fontSize: actionLabelSize }]}>На проверке</ThemedText>
-              </Card>
             </View>
           </View>
         )}
@@ -414,24 +385,6 @@ const styles = StyleSheet.create({
   statLabel: {
     fontWeight: '500',
     includeFontPadding: false,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionCard: {
-    flex: 1,
-    padding: 16,
-    alignItems: 'center',
-    gap: 10,
-  },
-  actionIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionLabel: {
-    fontWeight: '500',
-    textAlign: 'center',
   },
   welcomeCard: {
     gap: 8,

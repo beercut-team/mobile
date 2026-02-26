@@ -19,10 +19,18 @@ React Native mobile app built with Expo SDK 54, using Expo Router for file-based
 - `npm run seed:comments <TOKEN>` — Seed test comments
 - `npm run seed:iol <TOKEN>` — Seed IOL calculations
 - `npm run seed:statuses <TOKEN>` — Update patient statuses
+- `npm run seed:medical <EMAIL> <PASSWORD>` — Seed medical metadata (ICD-10, SNOMED, LOINC codes) for existing patients
 - `node scripts/seed-patient-notifications.js <TOKEN> [PATIENT_ID]` — Seed test notifications (requires backend support)
 - `node scripts/test-notifications.js <EMAIL> <PASSWORD>` — Test notification API endpoints (list, unread count, mark as read, push token registration)
+- `npm run test` — Run all tests
+- `npm run test:icd10` — Test ICD-10 medical standards
+- `npm run test:snomed` — Test SNOMED CT
+- `npm run test:loinc` — Test LOINC
+- `npm run test:fhir` — Test FHIR mapper
+- `npm run test:emias` — Test EMIAS integration
+- `npm run test:riams` — Test RIAMS integration
 
-No test framework is configured yet.
+Tests are implemented as standalone Node.js scripts in `__tests__/` directory (no Jest/Vitest framework). Each test file can be run individually or all together via `npm run test`.
 
 ## Architecture
 
@@ -58,11 +66,13 @@ No test framework is configured yet.
 **Domain Features:**
 - **IOL Calculator** (`/lib/iol.ts`): Calculates intraocular lens power using SRKT, Haigis, or Hoffer Q formulas. Requires axial length, keratometry values, optional ACD and target refraction. Stores calculation history per patient with warnings for out-of-range values.
 - **Checklists** (`/lib/checklists.ts`): Pre-surgery checklist system with status tracking (PENDING, IN_PROGRESS, COMPLETED, REJECTED, EXPIRED). Progress calculation for required vs optional items. Items can be updated by doctors and reviewed by surgeons.
-- **Comments** (`/lib/comments.ts`): Threaded comment system with urgent flag and read status. Used for doctor-patient communication. Unread count tracked per user.
-- **Notifications** (`/lib/notifications.ts`, `/hooks/useNotifications.ts`): Notification system with 10 types (status_change, doctor_assigned, surgeon_assigned, surgery_scheduled, diagnosis_set, operation_type_set, comment, checklist_update, iol_calculation, media_uploaded). API functions: `getNotifications()`, `getUnreadCount()`, `markAsRead()`, `markAllAsRead()`. `useNotifications` hook provides React Query integration with auto-refresh every 30s for unread count. UI features: type-specific icons, navigation to patient on tap, badge on tab bar, pull-to-refresh. Frontend is read-only (cannot create notifications - requires backend). See `/docs/NOTIFICATIONS_API_SPEC.md` for backend requirements.
+- **Comments** (`/lib/comments.ts`): Threaded comment system with urgent flag and read status. Used for doctor-patient communication. Unread count tracked per user. Backend returns full `author` object (UserResponse) in addition to `author_id`.
+- **Notifications** (`/lib/notifications.ts`, `/hooks/useNotifications.ts`): Notification system with 10 types (STATUS_CHANGE, DOCTOR_ASSIGNED, SURGEON_ASSIGNED, SURGERY_SCHEDULED, DIAGNOSIS_SET, OPERATION_TYPE_SET, NEW_COMMENT, CHECKLIST_UPDATE, IOL_CALCULATION, MEDIA_UPLOADED). Backend uses UPPER_SNAKE_CASE format. API functions: `getNotifications()`, `getUnreadCount()`, `markAsRead()`, `markAllAsRead()`. Helper: `getNotificationIcon(type)` maps types to icon names. `useNotifications` hook provides React Query integration with auto-refresh every 30s for unread count. UI features: type-specific icons, navigation to patient on tap, badge on tab bar, pull-to-refresh. Frontend is read-only (cannot create notifications - requires backend). See `/docs/NOTIFICATIONS_API_SPEC.md` for backend requirements.
 - **Print/PDF** (`/lib/print.ts`): Generates PDF documents (routing sheets, checklist reports) via backend. Returns Blob for download/sharing. Platform-specific download handlers in `/utils/pdf-download.ts` (web: creates download link, mobile: saves to FileSystem and uses Sharing API).
 - **Districts** (`/lib/districts.ts`): Geographic organization of patients. District doctors are assigned to specific districts.
 - **Surgeries** (`/lib/surgeries.ts`): Surgery scheduling and management. Links to patients with surgery dates.
+- **Medical Standards** (`/lib/medical-standards/`): Support for international medical standards (HL7/FHIR, ICD-10, SNOMED CT, LOINC). Patient type extended with optional `medical_metadata` field (JSONB in DB) containing diagnosis codes (ICD-10), procedure codes (SNOMED CT), observations (LOINC), FHIR resource ID, and integration metadata. FHIR R4 mapper converts patient data to FHIR Bundle (Patient, Condition, Procedure, Observation resources). Predefined codes for cataract diagnoses and ophthalmic procedures. Search/validation utilities for each coding system. Backward compatible - `diagnosis` field preserved as fallback. See `/docs/MEDICAL_STANDARDS.md` for full documentation.
+- **Integrations** (`/lib/integrations/`): Integration stubs for external medical systems. EMIAS (Единая медицинская информационно-аналитическая система, Moscow) and RIAMS (Региональная информационно-аналитическая медицинская система, regional) integrations with validation, export functions, and sync status tracking. Supports 10 RIAMS regions (Moscow, St. Petersburg, etc.). Functions: `exportPatientToEMIAS()`, `exportPatientToRIAMS()`, `validateForEMIAS()`, `validateForRIAMS()`, `getAllSyncStatuses()`, `isReadyForExport()`. MVP implementation uses mock responses - requires backend API endpoints. Integration metadata stored in `medical_metadata.integrations` (patient IDs, sync status, timestamps).
 
 **Component Structure:**
 - UI primitives in `/components/ui/` (Button, Input, Card, Modal, Select, StatusBadge, ActionSheet, TabView, ProgressBar, FloatingTabBar, OfflineIndicator)

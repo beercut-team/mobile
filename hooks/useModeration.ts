@@ -46,7 +46,9 @@ export function useModeration() {
     patients: data,
     approve: approveMutation.mutate,
     reject: rejectMutation.mutate,
-    isLoading: isLoading || approveMutation.isPending || rejectMutation.isPending,
+    isLoading,
+    isApproving: approveMutation.isPending,
+    isRejecting: rejectMutation.isPending,
     error,
   };
 }

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Link } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useAccessibility } from '@/contexts/accessibility-context';
@@ -28,11 +29,21 @@ function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function validatePassword(password: string): string | undefined {
+  if (!password) return 'Введите пароль';
+  if (password.length < 8) return 'Минимум 8 символов';
+  if (!/[A-Z]/.test(password)) return 'Требуется заглавная буква';
+  if (!/[a-z]/.test(password)) return 'Требуется строчная буква';
+  if (!/[0-9]/.test(password)) return 'Требуется цифра';
+  return undefined;
+}
+
 export default function LoginScreen() {
   const { login } = useAuth();
   const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
+  const insets = useSafeAreaInsets();
 
   const titleSize = useAccessibilityFontSize(28);
   const subtitleSize = useAccessibilityFontSize(16);
@@ -57,8 +68,7 @@ export default function LoginScreen() {
           else next.email = undefined;
           break;
         case 'password':
-          if (!password) next.password = 'Введите пароль';
-          else next.password = undefined;
+          next.password = validatePassword(password);
           break;
       }
       return next;
@@ -78,7 +88,7 @@ export default function LoginScreen() {
     if (!email.trim()) next.email = 'Введите email';
     else if (!validateEmail(email.trim())) next.email = 'Некорректный email';
 
-    if (!password) next.password = 'Введите пароль';
+    next.password = validatePassword(password);
 
     setErrors(next);
     setTouched({ email: true, password: true });
@@ -88,6 +98,9 @@ export default function LoginScreen() {
   const mutation = useMutation({
     mutationFn: () => login(email.trim(), password),
   });
+
+  const contentPaddingTop = Math.max(insets.top + 18, 28);
+  const contentPaddingBottom = Math.max(insets.bottom + 20, 28);
 
   const handleLogin = () => {
     if (!validate()) return;
@@ -101,7 +114,10 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
@@ -181,8 +197,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 24,
   },
   header: {
     marginBottom: 20,

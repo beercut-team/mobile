@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getPatientMedia, uploadMedia, deleteMedia } from '@/lib/media';
+import { getPatientMedia, uploadMedia, deleteMedia, validateFile } from '@/lib/media';
 import type { UploadMediaRequest } from '@/lib/media';
 import { useToast } from '@/contexts/toast-context';
 import { addToQueue } from '@/lib/offline-queue';
@@ -22,34 +22,26 @@ export function useMediaUpload(patientId: number) {
 
   const uploadMutation = useMutation({
     mutationFn: async (data: UploadMediaRequest) => {
-      try {
-        const response = await uploadMedia(data);
-        return response.data;
-      } catch (error) {
-        if (!isOnline || (error instanceof ApiError && error.status >= 500)) {
-          // Queue for offline sync
-          await addToQueue({
-            entity: 'media',
-            action: 'CREATE',
-            payload: data,
-            client_time: new Date().toISOString(),
-          });
-          await updatePendingCount();
-          throw new Error('offline');
-        }
-        throw error;
+      // Block file uploads when offline
+      if (!isOnline) {
+        throw new Error('Загрузка файлов доступна только онлайн');
       }
+
+      // Validate file before upload
+      const validation = validateFile(data.file);
+      if (!validation.valid) {
+        throw new Error(validation.error);
+      }
+
+      const response = await uploadMedia(data);
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media', patientId] });
       showToast('Файл загружен', 'success');
     },
     onError: (error: Error) => {
-      if (error.message === 'offline') {
-        showToast('Файл сохранён для загрузки при подключении', 'success');
-      } else {
-        showToast(error.message || 'Ошибка загрузки файла', 'error');
-      }
+      showToast(error.message || 'Ошибка загрузки файла', 'error');
     },
   });
 
@@ -86,6 +78,8 @@ export function useMediaUpload(patientId: number) {
       if (error.message === 'offline') {
         showToast('Удаление сохранено для синхронизации', 'success');
       } else {
+        // Rollback optimistic update on error
+        queryClient.invalidateQueries({ queryKey: ['media', patientId] });
         showToast(error.message || 'Ошибка удаления файла', 'error');
       }
     },

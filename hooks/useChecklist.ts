@@ -71,6 +71,9 @@ export function useChecklist(patientId: number) {
       if (error.message === 'offline') {
         showToast('Изменения сохранены для синхронизации', 'success');
       } else {
+        // Rollback optimistic update on error
+        queryClient.invalidateQueries({ queryKey: ['checklists', patientId] });
+        queryClient.invalidateQueries({ queryKey: ['checklists', patientId, 'progress'] });
         showToast(error.message || 'Ошибка обновления чеклиста', 'error');
       }
     },

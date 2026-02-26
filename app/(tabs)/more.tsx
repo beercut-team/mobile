@@ -35,7 +35,7 @@ export default function MoreScreen() {
   const sectionTitleSize = useAccessibilityFontSize(15);
   const sectionDescSize = useAccessibilityFontSize(13);
   const bottomSectionLift = useAccessibilityFontSize(10);
-  const tabBarClearance = Math.max(136, insets.bottom + 108);
+  const tabBarClearance = Math.max(156, insets.bottom + 126);
 
   const isPatient = hasRole('PATIENT');
 
@@ -62,7 +62,7 @@ export default function MoreScreen() {
     <ThemedView style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <ThemedText type="title" style={{ fontSize: titleSize }}>
-          Ещё
+          Подробности
         </ThemedText>
       </View>
 

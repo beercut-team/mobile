@@ -14,7 +14,7 @@ export function Card({ style, ...props }: ViewProps) {
 
   return (
     <View
-      style={[
+      style={[ 
         styles.card,
         {
           backgroundColor: colors.card,

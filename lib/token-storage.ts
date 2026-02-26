@@ -11,14 +11,18 @@ interface Tokens {
 
 async function getItem(key: string): Promise<string | null> {
   if (Platform.OS === 'web') {
-    return localStorage.getItem(key);
+    // Use sessionStorage instead of localStorage to reduce XSS attack surface
+    // Tokens are cleared when the browser tab is closed
+    return sessionStorage.getItem(key);
   }
   return SecureStore.getItemAsync(key);
 }
 
 async function setItem(key: string, value: string): Promise<void> {
   if (Platform.OS === 'web') {
-    localStorage.setItem(key, value);
+    // Use sessionStorage instead of localStorage to reduce XSS attack surface
+    // Tokens are cleared when the browser tab is closed
+    sessionStorage.setItem(key, value);
     return;
   }
   await SecureStore.setItemAsync(key, value);
@@ -26,7 +30,7 @@ async function setItem(key: string, value: string): Promise<void> {
 
 async function deleteItem(key: string): Promise<void> {
   if (Platform.OS === 'web') {
-    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
     return;
   }
   await SecureStore.deleteItemAsync(key);

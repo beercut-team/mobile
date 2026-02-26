@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,10 +9,12 @@ import {
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Colors } from '@/constants/theme';
 import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -39,10 +41,12 @@ const STATUS_FILTERS: (PatientStatus | 'ALL')[] = [
 ];
 
 export default function PatientsScreen() {
+  const router = useRouter();
   const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
+  const tabBarClearance = Math.max(156, insets.bottom + 126);
 
   const titleSize = useAccessibilityFontSize(28);
   const searchIconSize = useAccessibilityFontSize(18);
@@ -67,14 +71,20 @@ export default function PatientsScreen() {
   const emptyTextSize = useAccessibilityFontSize(15);
 
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<PatientStatus | 'ALL'>('ALL');
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['patients', search, statusFilter, page],
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['patients', debouncedSearch, statusFilter, page],
     queryFn: () =>
       getPatients({
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         status: statusFilter === 'ALL' ? undefined : statusFilter,
         page,
         limit: 20,
@@ -89,58 +99,86 @@ export default function PatientsScreen() {
     refetch();
   }, [refetch]);
 
-  const renderPatient = ({ item }: { item: Patient }) => (
-    <Card style={styles.patientCard}>
-      <View style={styles.patientHeader}>
-        <View style={styles.patientInfo}>
-          <ThemedText style={[styles.patientName, { fontSize: patientNameSize }]}>
-            {item.last_name} {item.first_name}
-            {item.middle_name ? ` ${item.middle_name}` : ''}
-          </ThemedText>
-          <ThemedText style={[styles.patientMeta, { color: colors.mutedForeground, fontSize: patientMetaSize }]}>
-            {OPERATION_LABELS[item.operation_type]} · {EYE_LABELS[item.eye]}
+  // Error state component
+  if (error && !isLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={[styles.headerArea, { paddingTop: insets.top + 8 }]}>
+          <ThemedText type="title" style={[styles.title, { fontSize: titleSize }]}>
+            Пациенты
           </ThemedText>
         </View>
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: STATUS_COLORS[item.status] + '18', borderRadius: statusBadgeRadius, paddingHorizontal: statusBadgePaddingH, paddingVertical: statusBadgePaddingV },
-          ]}
-        >
+        <View style={styles.errorContainer}>
+          <ThemedText style={[styles.errorText, { color: colors.destructive, fontSize: emptyTextSize }]}>
+            Ошибка загрузки пациентов
+          </ThemedText>
+          <Button onPress={() => refetch()} style={styles.retryButton}>
+            Повторить
+          </Button>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  const renderPatient = ({ item }: { item: Patient }) => (
+    <Pressable
+      onPress={() => router.push(`/(tabs)/patients/${item.id}`)}
+      style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+      accessibilityRole="button"
+      accessibilityLabel={`Пациент ${item.last_name} ${item.first_name}, статус ${STATUS_LABELS[item.status]}`}
+    >
+      <Card style={styles.patientCard}>
+        <View style={styles.patientHeader}>
+          <View style={styles.patientInfo}>
+            <ThemedText style={[styles.patientName, { fontSize: patientNameSize }]}>
+              {item.last_name} {item.first_name}
+              {item.middle_name ? ` ${item.middle_name}` : ''}
+            </ThemedText>
+            <ThemedText style={[styles.patientMeta, { color: colors.mutedForeground, fontSize: patientMetaSize }]}>
+              {OPERATION_LABELS[item.operation_type]} · {EYE_LABELS[item.eye]}
+            </ThemedText>
+          </View>
           <View
             style={[
-              styles.statusDot,
-              { backgroundColor: STATUS_COLORS[item.status], width: statusDotSize, height: statusDotSize, borderRadius: statusDotSize / 2 },
+              styles.statusBadge,
+              { backgroundColor: STATUS_COLORS[item.status] + '18', borderRadius: statusBadgeRadius, paddingHorizontal: statusBadgePaddingH, paddingVertical: statusBadgePaddingV },
             ]}
-          />
-          <ThemedText
-            style={[styles.statusText, { color: STATUS_COLORS[item.status], fontSize: statusTextSize }]}
           >
-            {STATUS_LABELS[item.status]}
-          </ThemedText>
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: STATUS_COLORS[item.status], width: statusDotSize, height: statusDotSize, borderRadius: statusDotSize / 2 },
+              ]}
+            />
+            <ThemedText
+              style={[styles.statusText, { color: STATUS_COLORS[item.status], fontSize: statusTextSize }]}
+            >
+              {STATUS_LABELS[item.status]}
+            </ThemedText>
+          </View>
         </View>
-      </View>
 
-      {item.diagnosis && (
-        <ThemedText
-          style={[styles.diagnosis, { color: colors.mutedForeground, fontSize: diagnosisSize }]}
-          numberOfLines={1}
-        >
-          {item.diagnosis}
-        </ThemedText>
-      )}
-
-      <View style={[styles.patientFooter, { borderTopColor: colors.border }]}>
-        <ThemedText style={[styles.dateText, { color: colors.mutedForeground, fontSize: dateTextSize }]}>
-          {new Date(item.created_at).toLocaleDateString('ru-RU')}
-        </ThemedText>
-        {item.surgery_date && (
-          <ThemedText style={[styles.surgeryDate, { color: colors.primary, fontSize: surgeryDateSize }]}>
-            Операция: {new Date(item.surgery_date).toLocaleDateString('ru-RU')}
+        {item.diagnosis && (
+          <ThemedText
+            style={[styles.diagnosis, { color: colors.mutedForeground, fontSize: diagnosisSize }]}
+            numberOfLines={1}
+          >
+            {item.diagnosis}
           </ThemedText>
         )}
-      </View>
-    </Card>
+
+        <View style={[styles.patientFooter, { borderTopColor: colors.border }]}>
+          <ThemedText style={[styles.dateText, { color: colors.mutedForeground, fontSize: dateTextSize }]}>
+            {new Date(item.created_at).toLocaleDateString('ru-RU')}
+          </ThemedText>
+          {item.surgery_date && (
+            <ThemedText style={[styles.surgeryDate, { color: colors.primary, fontSize: surgeryDateSize }]}>
+              Операция: {new Date(item.surgery_date).toLocaleDateString('ru-RU')}
+            </ThemedText>
+          )}
+        </View>
+      </Card>
+    </Pressable>
   );
 
   return (
@@ -174,6 +212,8 @@ export default function PatientsScreen() {
               setPage(1);
             }}
             style={[styles.searchInput, { color: colors.text, fontSize: searchInputSize }]}
+            accessibilityLabel="Поиск пациентов по имени"
+            accessibilityHint="Введите имя пациента для поиска"
           />
         </View>
 
@@ -233,7 +273,7 @@ export default function PatientsScreen() {
         data={patients}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderPatient}
-        contentContainerStyle={[styles.list, { paddingBottom: 120 }]}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarClearance }]}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
@@ -347,4 +387,17 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyText: {},
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  retryButton: {
+    minWidth: 120,
+  },
 });

@@ -52,6 +52,15 @@ export function useComments(patientId: number) {
         throw error;
       }
     },
+    onMutate: async () => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['comments', patientId] });
+
+      // Save previous data for rollback
+      const previousData = queryClient.getQueryData(['comments', patientId]);
+
+      return { previousData };
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['comments', patientId] });
       // Auto mark as read after adding comment
@@ -63,10 +72,14 @@ export function useComments(patientId: number) {
       }
       showToast('Комментарий добавлен', 'success');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _variables, context) => {
       if (error.message === 'offline') {
         showToast('Комментарий сохранён для отправки', 'success');
       } else {
+        // Rollback to previous data on error
+        if (context?.previousData) {
+          queryClient.setQueryData(['comments', patientId], context.previousData);
+        }
         showToast(error.message || 'Ошибка добавления комментария', 'error');
       }
     },

@@ -56,7 +56,7 @@ export function PassportDataSection({ patient }: PassportDataSectionProps) {
         style={[styles.header, { padding }]}
         accessibilityRole="button"
         accessibilityState={{ expanded: isExpanded }}
-        accessibilityLabel="Паспортные данные"
+        accessibilityLabel="Персональные данные"
       >
         <Text
           style={[
@@ -67,7 +67,7 @@ export function PassportDataSection({ patient }: PassportDataSectionProps) {
             },
           ]}
         >
-          Паспортные данные
+          Персональные данные
         </Text>
         <IconSymbol
           name={isExpanded ? 'chevron.up' : 'chevron.down'}

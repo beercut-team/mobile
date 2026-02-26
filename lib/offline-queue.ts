@@ -19,6 +19,8 @@ function warnStorageUnavailableOnce() {
 export interface QueuedMutation extends SyncMutation {
   id: string;
   timestamp: number;
+  client_timestamp: number;
+  version?: number;
 }
 
 // Platform-specific storage helpers
@@ -57,15 +59,17 @@ async function removeStorageItem(key: string): Promise<void> {
   await AsyncStorage.removeItem(key);
 }
 
-export async function addToQueue(mutation: Omit<QueuedMutation, 'id' | 'timestamp'>): Promise<string> {
+export async function addToQueue(mutation: Omit<QueuedMutation, 'id' | 'timestamp' | 'client_timestamp'>): Promise<string> {
   const id = `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+  const now = Date.now();
 
   try {
     const queue = await getQueue();
     const queuedMutation: QueuedMutation = {
       ...mutation,
       id,
-      timestamp: Date.now(),
+      timestamp: now,
+      client_timestamp: now,
     };
 
     queue.push(queuedMutation);

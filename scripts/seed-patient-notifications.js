@@ -29,9 +29,10 @@ function generateNotifications(patientId) {
     // 1. Status NEW → PREPARATION (3 days ago = 72 hours)
     {
       user_id: patientId,
-      patient_id: patientId,
+      entity_id: patientId,
+      entity_type: 'patient',
       title: 'Статус изменен',
-      message: 'Ваш статус изменен на: На подготовке',
+      body: 'Ваш статус изменен на: На подготовке',
       type: 'status_change',
       created_at: hoursAgo(72)
     },
@@ -39,9 +40,10 @@ function generateNotifications(patientId) {
     // 2. Doctor assigned (3 days ago = 71 hours)
     {
       user_id: patientId,
-      patient_id: patientId,
+      entity_id: patientId,
+      entity_type: 'patient',
       title: 'Назначен лечащий врач',
-      message: 'Вам назначен лечащий врач: Николаев Айсен Петрович',
+      body: 'Вам назначен лечащий врач: Николаев Айсен Петрович',
       type: 'doctor_assigned',
       created_at: hoursAgo(71)
     },
@@ -49,9 +51,10 @@ function generateNotifications(patientId) {
     // 3. Diagnosis set (2 days ago = 48 hours)
     {
       user_id: patientId,
-      patient_id: patientId,
+      entity_id: patientId,
+      entity_type: 'patient',
       title: 'Диагноз установлен',
-      message: 'Установлен диагноз: Открытоугольная глаукома II стадии',
+      body: 'Установлен диагноз: Открытоугольная глаукома II стадии',
       type: 'diagnosis_set',
       created_at: hoursAgo(48)
     },
@@ -59,9 +62,10 @@ function generateNotifications(patientId) {
     // 4. Operation type set (2 days ago = 47 hours)
     {
       user_id: patientId,
-      patient_id: patientId,
+      entity_id: patientId,
+      entity_type: 'patient',
       title: 'Тип операции определен',
-      message: 'Назначена операция: Антиглаукоматозная операция (левый глаз)',
+      body: 'Назначена операция: Антиглаукоматозная операция (левый глаз)',
       type: 'operation_type_set',
       created_at: hoursAgo(47)
     },
@@ -69,9 +73,10 @@ function generateNotifications(patientId) {
     // 5. Surgeon assigned (1 day ago = 24 hours)
     {
       user_id: patientId,
-      patient_id: patientId,
+      entity_id: patientId,
+      entity_type: 'patient',
       title: 'Назначен хирург',
-      message: 'Вам назначен хирург: Васильев Ньургун Иванович',
+      body: 'Вам назначен хирург: Васильев Ньургун Иванович',
       type: 'surgeon_assigned',
       created_at: hoursAgo(24)
     },
@@ -79,9 +84,10 @@ function generateNotifications(patientId) {
     // 6. Status PREPARATION → REVIEW_NEEDED (1 day ago = 23 hours)
     {
       user_id: patientId,
-      patient_id: patientId,
+      entity_id: patientId,
+      entity_type: 'patient',
       title: 'Статус изменен',
-      message: 'Ваш статус изменен на: Требуется проверка',
+      body: 'Ваш статус изменен на: Требуется проверка',
       type: 'status_change',
       created_at: hoursAgo(23)
     },
@@ -89,9 +95,10 @@ function generateNotifications(patientId) {
     // 7. Comment added (12 hours ago)
     {
       user_id: patientId,
-      patient_id: patientId,
+      entity_id: patientId,
+      entity_type: 'patient',
       title: 'Новый комментарий',
-      message: 'Николаев Айсен: Пожалуйста, сдайте анализы крови до 5 марта',
+      body: 'Николаев Айсен: Пожалуйста, сдайте анализы крови до 5 марта',
       type: 'comment',
       created_at: hoursAgo(12)
     },
@@ -99,9 +106,10 @@ function generateNotifications(patientId) {
     // 8. Status REVIEW_NEEDED → APPROVED (6 hours ago)
     {
       user_id: patientId,
-      patient_id: patientId,
+      entity_id: patientId,
+      entity_type: 'patient',
       title: 'Статус изменен',
-      message: 'Ваш статус изменен на: Одобрен',
+      body: 'Ваш статус изменен на: Одобрен',
       type: 'status_change',
       created_at: hoursAgo(6)
     },
@@ -109,9 +117,10 @@ function generateNotifications(patientId) {
     // 9. Surgery scheduled (3 hours ago)
     {
       user_id: patientId,
-      patient_id: patientId,
+      entity_id: patientId,
+      entity_type: 'patient',
       title: 'Дата операции назначена',
-      message: 'Ваша операция назначена на 11 ноября 2026',
+      body: 'Ваша операция назначена на 11 ноября 2026',
       type: 'surgery_scheduled',
       created_at: hoursAgo(3)
     },
@@ -119,9 +128,10 @@ function generateNotifications(patientId) {
     // 10. Checklist created (1 hour ago)
     {
       user_id: patientId,
-      patient_id: patientId,
+      entity_id: patientId,
+      entity_type: 'patient',
       title: 'Обновлен чек-лист',
-      message: 'Создан предоперационный чек-лист',
+      body: 'Создан предоперационный чек-лист',
       type: 'checklist_update',
       created_at: hoursAgo(1)
     }
@@ -185,14 +195,14 @@ async function main() {
     try {
       const result = await createNotification(token, notification);
       console.log(`✅ ${notification.title}`);
-      console.log(`   ${notification.message}`);
+      console.log(`   ${notification.body}`);
       console.log(`   ⏰ ${formatTimestamp(notification.created_at)}\n`);
       successCount++;
     } catch (error) {
       if (error.message.includes('404')) {
         endpointNotFound = true;
         console.log(`📝 ${notification.title}`);
-        console.log(`   ${notification.message}`);
+        console.log(`   ${notification.body}`);
         console.log(`   ⏰ ${formatTimestamp(notification.created_at)}\n`);
       } else {
         console.error(`❌ Ошибка: ${notification.title}`);

@@ -29,7 +29,7 @@ export function TabView({ tabs, initialTab }: TabViewProps) {
   const theme = useColorScheme() ?? 'light';
   const { isAccessibilityMode } = useAccessibility();
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
-  const fontSize = useAccessibilityFontSize(14);
+  const fontSize = useAccessibilityFontSize(13);
   const tabHeight = useAccessibilityFontSize(40);
   const tabsPadding = useAccessibilityFontSize(6);
   const tabRadius = useAccessibilityFontSize(11);
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tab: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',

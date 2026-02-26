@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Link } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useAccessibility } from '@/contexts/accessibility-context';
@@ -41,12 +42,22 @@ function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function validatePassword(password: string): string | undefined {
+  if (!password) return 'Введите пароль';
+  if (password.length < 8) return 'Минимум 8 символов';
+  if (!/[A-Z]/.test(password)) return 'Требуется заглавная буква';
+  if (!/[a-z]/.test(password)) return 'Требуется строчная буква';
+  if (!/[0-9]/.test(password)) return 'Требуется цифра';
+  return undefined;
+}
+
 export default function RegisterScreen() {
   const { register } = useAuth();
   const { showToast } = useToast();
   const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
+  const insets = useSafeAreaInsets();
 
   const titleSize = useAccessibilityFontSize(28);
   const subtitleSize = useAccessibilityFontSize(15);
@@ -96,9 +107,7 @@ export default function RegisterScreen() {
           else next.phone = undefined;
           break;
         case 'password':
-          if (!password) next.password = 'Введите пароль';
-          else if (password.length < 6) next.password = 'Минимум 6 символов';
-          else next.password = undefined;
+          next.password = validatePassword(password);
           break;
         case 'confirmPassword':
           if (!confirmPassword) next.confirmPassword = 'Подтвердите пароль';
@@ -128,8 +137,7 @@ export default function RegisterScreen() {
 
     if (phone && !isPhoneComplete(phone)) next.phone = 'Введите полный номер';
 
-    if (!password) next.password = 'Введите пароль';
-    else if (password.length < 6) next.password = 'Минимум 6 символов';
+    next.password = validatePassword(password);
 
     if (!confirmPassword) next.confirmPassword = 'Подтвердите пароль';
     else if (confirmPassword !== password) next.confirmPassword = 'Пароли не совпадают';
@@ -155,6 +163,9 @@ export default function RegisterScreen() {
     },
   });
 
+  const contentPaddingTop = Math.max(insets.top + 18, 26);
+  const contentPaddingBottom = Math.max(insets.bottom + 20, 28);
+
   const handleRegister = () => {
     if (!validate()) return;
     mutation.reset();
@@ -167,7 +178,10 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
@@ -320,8 +334,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 24,
   },
   header: {
     marginBottom: 20,

@@ -51,7 +51,9 @@ function resolveActiveRouteName(
   }
 
   if (
-    (currentRouteName === 'notifications' || currentRouteName === 'profile') &&
+    (currentRouteName === 'notifications' ||
+      currentRouteName === 'profile' ||
+      currentRouteName === 'documents') &&
     visibleRouteNames.has('more')
   ) {
     return 'more';
@@ -226,6 +228,7 @@ function TabButton({
   const innerPaddingHorizontal = useAccessibilityFontSize(8);
   const innerRadius = useAccessibilityFontSize(17);
   const innerGap = useAccessibilityFontSize(4);
+  const capsuleBorderWidth = isAccessibilityMode ? 1 : 0.7;
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -253,22 +256,21 @@ function TabButton({
           : isDark
             ? 'rgba(170,210,255,0.38)'
             : 'rgba(190,220,255,0.9)',
-        borderWidth: isAccessibilityMode ? 1 : 0.7,
         ...Platform.select({
           ios: {
             shadowColor: '#0A84FF',
-            shadowOffset: { width: 0, height: 3 },
+            shadowOffset: { width: 0, height: 0 },
             shadowOpacity: isDark ? 0.2 : 0.14,
-            shadowRadius: 8,
+            shadowRadius: 7,
           },
           android: {
             elevation: 2,
           },
           web: {
             shadowColor: '#0A84FF',
-            shadowOffset: { width: 0, height: 3 },
+            shadowOffset: { width: 0, height: 0 },
             shadowOpacity: isDark ? 0.2 : 0.14,
-            shadowRadius: 8,
+            shadowRadius: 7,
           },
         }),
       }
@@ -294,6 +296,8 @@ function TabButton({
             paddingVertical: innerPaddingVertical,
             paddingHorizontal: innerPaddingHorizontal,
             borderRadius: innerRadius,
+            borderWidth: capsuleBorderWidth,
+            borderColor: 'transparent',
             gap: innerGap,
           },
           activeCapsuleStyle,

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 import { useQueryClient } from '@tanstack/react-query';
 import { getQueue, removeFromQueue, getQueueCount } from '@/lib/offline-queue';
@@ -12,6 +12,7 @@ export function useOfflineSync() {
   const [pendingCount, setPendingCount] = useState(0);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const syncLockRef = useRef(false);
 
   const updatePendingCount = useCallback(async () => {
     const count = await getQueueCount();
@@ -19,7 +20,8 @@ export function useOfflineSync() {
   }, []);
 
   const syncQueue = useCallback(async () => {
-    if (isSyncing) return;
+    // Prevent concurrent syncs using ref lock
+    if (syncLockRef.current || isSyncing) return;
 
     const queue = await getQueue();
     if (queue.length === 0) {
@@ -27,26 +29,32 @@ export function useOfflineSync() {
       return;
     }
 
+    syncLockRef.current = true;
     setIsSyncing(true);
 
     try {
       // Convert QueuedMutation to SyncMutation format
       const mutations = queue.map(({ id, timestamp, ...mutation }) => mutation);
 
-      await pushSync({ mutations });
+      const result = await pushSync({ mutations });
 
-      // Remove synced mutations from queue
-      await Promise.all(queue.map(item => removeFromQueue(item.id)));
+      // Only remove successful mutations from queue
+      await Promise.all(
+        queue
+          .filter(item => result.successful.includes(item.id))
+          .map(item => removeFromQueue(item.id))
+      );
 
       // Invalidate all queries to refresh data
       await queryClient.invalidateQueries();
 
       await updatePendingCount();
-      showToast(`Синхронизировано ${queue.length} изменений`, 'success');
+      showToast(`Синхронизировано ${result.successful.length} изменений`, 'success');
     } catch (error) {
       console.error('Sync failed:', error);
       showToast('Ошибка синхронизации', 'error');
     } finally {
+      syncLockRef.current = false;
       setIsSyncing(false);
     }
   }, [isSyncing, queryClient, showToast, updatePendingCount]);

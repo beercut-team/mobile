@@ -11,7 +11,7 @@ export function usePatientDetail(patientId: number) {
   const { showToast } = useToast();
   const { isOnline, updatePendingCount } = useOfflineSync();
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['patients', patientId],
     queryFn: async () => {
       const response = await getPatient(patientId);
@@ -48,15 +48,28 @@ export function usePatientDetail(patientId: number) {
         throw error;
       }
     },
+    onMutate: async (data: UpdatePatientRequest) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['patients', patientId] });
+
+      // Save previous data for rollback
+      const previousData = queryClient.getQueryData(['patients', patientId]);
+
+      return { previousData };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients', patientId] });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       showToast('Данные пациента обновлены', 'success');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _variables, context) => {
       if (error.message === 'offline') {
         showToast('Изменения сохранены для синхронизации', 'success');
       } else {
+        // Rollback to previous data on error
+        if (context?.previousData) {
+          queryClient.setQueryData(['patients', patientId], context.previousData);
+        }
         showToast(error.message || 'Ошибка обновления данных', 'error');
       }
     },
@@ -89,15 +102,28 @@ export function usePatientDetail(patientId: number) {
         throw error;
       }
     },
+    onMutate: async () => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['patients', patientId] });
+
+      // Save previous data for rollback
+      const previousData = queryClient.getQueryData(['patients', patientId]);
+
+      return { previousData };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients', patientId] });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       showToast('Статус пациента изменён', 'success');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _variables, context) => {
       if (error.message === 'offline') {
         showToast('Изменения сохранены для синхронизации', 'success');
       } else {
+        // Rollback to previous data on error
+        if (context?.previousData) {
+          queryClient.setQueryData(['patients', patientId], context.previousData);
+        }
         showToast(error.message || 'Ошибка изменения статуса', 'error');
       }
     },
@@ -109,5 +135,6 @@ export function usePatientDetail(patientId: number) {
     updateStatus: updateStatusMutation.mutate,
     isLoading: isLoading || updateMutation.isPending || updateStatusMutation.isPending,
     error,
+    refetch,
   };
 }

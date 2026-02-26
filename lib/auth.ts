@@ -1,4 +1,4 @@
-import { apiFetch, API_BASE_URL } from './api';
+import { apiFetch, API_BASE_URL, fetchWithTimeout } from './api';
 
 export type UserRole = 'DISTRICT_DOCTOR' | 'SURGEON' | 'PATIENT' | 'ADMIN';
 
@@ -60,7 +60,7 @@ export interface ApiResponse<T> {
 }
 
 export async function registerUser(data: RegisterRequest): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/api/v1/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -79,7 +79,7 @@ export async function registerUser(data: RegisterRequest): Promise<AuthResponse>
 }
 
 export async function loginUser(data: LoginRequest): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -98,7 +98,7 @@ export async function loginUser(data: LoginRequest): Promise<AuthResponse> {
 }
 
 export async function loginPatient(data: PatientLoginRequest): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/auth/patient-login`, {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/api/v1/auth/patient-login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),

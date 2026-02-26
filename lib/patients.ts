@@ -1,5 +1,6 @@
 import { apiFetch } from './api';
 import type { ApiResponse } from './auth';
+import type { MedicalStandardsMetadata } from './medical-standards';
 
 export type PatientStatus =
   | 'NEW'
@@ -27,7 +28,9 @@ export interface Patient {
   passport_series?: string;
   passport_number?: string;
   policy_number?: string;
-  diagnosis?: string;
+  oms_policy?: string; // Добавлено для интеграций
+  gender?: 'male' | 'female'; // Добавлено для FHIR/интеграций
+  diagnosis?: string; // Сохраняем как fallback
   operation_type: OperationType;
   eye: Eye;
   status: PatientStatus;
@@ -41,11 +44,18 @@ export interface Patient {
     id: number;
     name: string;
   } | null;
+  district?: {
+    id: number;
+    name: string;
+  } | null;
   district_id: number;
   notes?: string;
   surgery_date?: string | null;
   created_at: string;
   updated_at: string;
+
+  // НОВОЕ: метаданные медицинских стандартов
+  medical_metadata?: MedicalStandardsMetadata;
 }
 
 export interface CreatePatientRequest {
@@ -131,6 +141,32 @@ export async function changePatientStatus(
 
 export async function getDashboard(): Promise<ApiResponse<Record<string, number>>> {
   return apiFetch<ApiResponse<Record<string, number>>>('/api/v1/patients/dashboard');
+}
+
+// ============================================================================
+// Medical Standards API
+// ============================================================================
+
+/**
+ * Обновить медицинские метаданные пациента
+ * TODO: Требуется реализация на backend
+ */
+export async function updateMedicalMetadata(
+  id: number,
+  metadata: MedicalStandardsMetadata
+): Promise<ApiResponse<Patient>> {
+  return apiFetch<ApiResponse<Patient>>(`/api/v1/patients/${id}/medical-metadata`, {
+    method: 'POST',
+    body: JSON.stringify(metadata),
+  });
+}
+
+/**
+ * Получить FHIR Bundle для пациента
+ * TODO: Требуется реализация на backend
+ */
+export async function getPatientFHIRBundle(id: number): Promise<ApiResponse<any>> {
+  return apiFetch<ApiResponse<any>>(`/api/v1/patients/${id}/fhir-bundle`);
 }
 
 export const STATUS_LABELS: Record<PatientStatus, string> = {
