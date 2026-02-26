@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,6 +12,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth-context';
 import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
@@ -20,11 +21,13 @@ import type { Notification } from '@/lib/notifications';
 import { getNotificationIcon } from '@/lib/notifications';
 
 export default function NotificationsScreen() {
+  const { user, hasRole } = useAuth();
   const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
   const tabBarClearance = Math.max(156, insets.bottom + 126);
+  const isPatient = hasRole('PATIENT');
 
   const titleSize = useAccessibilityFontSize(28);
   const notifTitleSize = useAccessibilityFontSize(15);
@@ -39,13 +42,22 @@ export default function NotificationsScreen() {
   const markAllBtnPadding = useAccessibilityFontSize(12);
 
   const {
-    notifications,
+    notifications: allNotifications,
     isLoading,
     error,
     refetch,
     markAllAsRead,
     isMarkingAllRead,
   } = useNotifications(1, 50);
+
+  // Filter notifications for patients - only show notifications related to their patient record
+  const notifications = useMemo(() => {
+    if (!isPatient || !user?.id) {
+      return allNotifications;
+    }
+    // For patients, only show notifications where entity_id matches their user_id (patient_id)
+    return allNotifications.filter(n => n.entity_id === user.id);
+  }, [allNotifications, isPatient, user?.id]);
 
   const hasUnread = notifications.some((n) => !n.is_read);
 
