@@ -86,6 +86,12 @@ async function main() {
     console.log('='.repeat(60));
     runScript('seed-checklists.js', token);
 
+    // Step 7: Try to seed notifications (requires backend support)
+    console.log('\n' + '='.repeat(60));
+    console.log('Running: seed-patient-notifications.js (requires backend support)');
+    console.log('='.repeat(60));
+    runScript('seed-patient-notifications.js', token);
+
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
 
     console.log('\n' + '='.repeat(60));
@@ -97,6 +103,7 @@ async function main() {
     console.log('   • 10 comments (including urgent ones)');
     console.log('   • 7 IOL calculations (3 formulas)');
     console.log('   • Status updates for workflow demonstration');
+    console.log('   • 10 notifications (if backend supports it)');
     console.log('\n🎯 Test the app now!');
     console.log('   npm start');
 

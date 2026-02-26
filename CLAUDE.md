@@ -19,6 +19,7 @@ React Native mobile app built with Expo SDK 54, using Expo Router for file-based
 - `npm run seed:comments <TOKEN>` — Seed test comments
 - `npm run seed:iol <TOKEN>` — Seed IOL calculations
 - `npm run seed:statuses <TOKEN>` — Update patient statuses
+- `node scripts/seed-patient-notifications.js <TOKEN> [PATIENT_ID]` — Seed test notifications (requires backend support)
 
 No test framework is configured yet.
 
@@ -57,6 +58,7 @@ No test framework is configured yet.
 - **IOL Calculator** (`/lib/iol.ts`): Calculates intraocular lens power using SRKT, Haigis, or Hoffer Q formulas. Requires axial length, keratometry values, optional ACD and target refraction. Stores calculation history per patient with warnings for out-of-range values.
 - **Checklists** (`/lib/checklists.ts`): Pre-surgery checklist system with status tracking (PENDING, IN_PROGRESS, COMPLETED, REJECTED, EXPIRED). Progress calculation for required vs optional items. Items can be updated by doctors and reviewed by surgeons.
 - **Comments** (`/lib/comments.ts`): Threaded comment system with urgent flag and read status. Used for doctor-patient communication. Unread count tracked per user.
+- **Notifications** (`/lib/notifications.ts`): Read-only notification system for patients. Displays status changes, doctor assignments, surgery scheduling, and other patient data updates. Frontend can read and mark as read, but **cannot create notifications** (requires backend implementation). See `/docs/NOTIFICATIONS_API_SPEC.md` for backend requirements.
 - **Print/PDF** (`/lib/print.ts`): Generates PDF documents (routing sheets, checklist reports) via backend. Returns Blob for download/sharing. Platform-specific download handlers in `/utils/pdf-download.ts` (web: creates download link, mobile: saves to FileSystem and uses Sharing API).
 - **Districts** (`/lib/districts.ts`): Geographic organization of patients. District doctors are assigned to specific districts.
 - **Surgeries** (`/lib/surgeries.ts`): Surgery scheduling and management. Links to patients with surgery dates.
