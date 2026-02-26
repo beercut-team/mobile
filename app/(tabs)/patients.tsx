@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -42,6 +42,7 @@ const STATUS_FILTERS: (PatientStatus | 'ALL')[] = [
 
 export default function PatientsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ statusFilter?: PatientStatus }>();
   const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
@@ -72,8 +73,18 @@ export default function PatientsScreen() {
 
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<PatientStatus | 'ALL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<PatientStatus | 'ALL'>(
+    params.statusFilter || 'ALL'
+  );
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    if (params.statusFilter && params.statusFilter !== statusFilter) {
+      setStatusFilter(params.statusFilter);
+      setPage(1); // Reset to first page
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.statusFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 500);

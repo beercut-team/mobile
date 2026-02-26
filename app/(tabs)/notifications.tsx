@@ -4,9 +4,7 @@ import {
   View,
   FlatList,
   RefreshControl,
-  Pressable,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -26,7 +24,6 @@ export default function NotificationsScreen() {
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const tabBarClearance = Math.max(156, insets.bottom + 126);
 
   const titleSize = useAccessibilityFontSize(28);
@@ -46,7 +43,6 @@ export default function NotificationsScreen() {
     isLoading,
     error,
     refetch,
-    markAsRead,
     markAllAsRead,
     isMarkingAllRead,
   } = useNotifications(1, 50);
@@ -93,32 +89,18 @@ export default function NotificationsScreen() {
     return date.toLocaleDateString('ru-RU');
   };
 
-  const handleNotificationPress = (notification: Notification) => {
-    // Mark as read if unread
-    if (!notification.is_read) {
-      markAsRead(notification.id);
-    }
-
-    // Navigate to patient detail if entity_id exists
-    if (notification.entity_id) {
-      router.push(`/(tabs)/patients/${notification.entity_id}` as any);
-    }
-  };
-
   const renderNotification = ({ item }: { item: Notification }) => {
     const iconName = getNotificationIcon(item.type);
 
     return (
-      <Pressable
-        onPress={() => handleNotificationPress(item)}
-        style={({ pressed }) => [
+      <View
+        style={[
           styles.notifItem,
           {
             backgroundColor: item.is_read
               ? colors.card
               : colors.primary + '08',
             borderColor: item.is_read ? colors.border : colors.primary + '25',
-            opacity: pressed ? 0.8 : 1,
             borderRadius,
           },
         ]}
@@ -150,7 +132,7 @@ export default function NotificationsScreen() {
             </ThemedText>
           </View>
         </View>
-      </Pressable>
+      </View>
     );
   };
 

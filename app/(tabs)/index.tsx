@@ -1,17 +1,20 @@
-import { ScrollView, StyleSheet, View, RefreshControl, ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, View, RefreshControl, ActivityIndicator, Platform, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { PatientCard } from '@/components/patient/PatientCard';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
-import { getDashboard, getPatient, STATUS_LABELS, OPERATION_LABELS, EYE_LABELS, type PatientStatus } from '@/lib/patients';
+import { getDashboard, getPatient, getPatients, STATUS_LABELS, OPERATION_LABELS, EYE_LABELS, type PatientStatus } from '@/lib/patients';
 import { getUnreadCount } from '@/lib/notifications';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -39,6 +42,7 @@ export default function HomeScreen() {
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
   const insets = useSafeAreaInsets();
   const tabBarClearance = Math.max(156, insets.bottom + 126);
+  const router = useRouter();
 
   const greetingSize = useAccessibilityFontSize(15);
   const roleTextSize = useAccessibilityFontSize(12);
@@ -66,6 +70,13 @@ export default function HomeScreen() {
     enabled: isPatient && !!user?.id,
   });
 
+  const { data: recentPatients, isLoading: recentLoading, refetch: refetchRecent } = useQuery({
+    queryKey: ['patients', 'recent'],
+    queryFn: () => getPatients({ limit: 5, page: 1 }),
+    enabled: showDashboard,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: unread } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: getUnreadCount,
@@ -89,10 +100,11 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading || patientLoading}
+            refreshing={isLoading || patientLoading || recentLoading}
             onRefresh={() => {
               refetch();
               if (isPatient) refetchPatient();
+              if (showDashboard) refetchRecent();
             }}
             tintColor={colors.primary}
           />
@@ -127,6 +139,40 @@ export default function HomeScreen() {
           </Card>
         )}
 
+        {/* Quick Create Button */}
+        {hasRole('DISTRICT_DOCTOR', 'ADMIN') && (
+          <Button
+            onPress={() => router.push('/(tabs)/patients/create')}
+            style={styles.createButton}
+          >
+            + Создать пациента
+          </Button>
+        )}
+
+        {/* Recent Patients */}
+        {showDashboard && recentPatients && (
+          <View style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Недавние пациенты
+            </ThemedText>
+            {recentLoading && <ActivityIndicator size="large" color={colors.primary} />}
+            {!recentLoading && recentPatients.data?.length === 0 && (
+              <Card style={styles.emptyCard}>
+                <ThemedText style={{ color: colors.mutedForeground }}>
+                  Пациенты не найдены
+                </ThemedText>
+              </Card>
+            )}
+            {!recentLoading && recentPatients.data?.map((patient) => (
+              <PatientCard
+                key={patient.id}
+                patient={patient}
+                progress={STATUS_READINESS[patient.status]}
+              />
+            ))}
+          </View>
+        )}
+
         {/* Dashboard Stats */}
         {showDashboard && stats && (() => {
           const totalPatients = Object.values(stats).reduce((sum, count) => sum + (typeof count === 'number' ? count : 0), 0);
@@ -142,37 +188,53 @@ export default function HomeScreen() {
                   if (!STATUS_LABELS[status]) return null;
                   const readiness = STATUS_READINESS[status];
                   return (
-                    <Card key={status} style={styles.statCard}>
-                      <View style={styles.statHeader}>
-                        <View style={styles.statBadgeWrap}>
-                          <StatusBadge
-                            status={STATUS_LABELS[status]}
-                            percentage={readiness}
-                            size="sm"
-                            multiline
-                          />
+                    <Pressable
+                      key={status}
+                      onPress={() => {
+                        if (Platform.OS === 'ios') {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }
+                        router.push({
+                          pathname: '/(tabs)/patients',
+                          params: { statusFilter: status }
+                        });
+                      }}
+                      style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Показать пациентов со статусом ${STATUS_LABELS[status]}`}
+                    >
+                      <Card style={styles.statCard}>
+                        <View style={styles.statHeader}>
+                          <View style={styles.statBadgeWrap}>
+                            <StatusBadge
+                              status={STATUS_LABELS[status]}
+                              percentage={readiness}
+                              size="sm"
+                              multiline
+                            />
+                          </View>
+                          <View style={styles.readinessWrap}>
+                            <ThemedText numberOfLines={1} style={[styles.readinessText, { color: colors.mutedForeground, fontSize: statLabelSize }]}>
+                              {readiness}%
+                            </ThemedText>
+                          </View>
                         </View>
-                        <View style={styles.readinessWrap}>
-                          <ThemedText numberOfLines={1} style={[styles.readinessText, { color: colors.mutedForeground, fontSize: statLabelSize }]}>
-                            {readiness}%
+                        <View style={styles.statBody}>
+                          <ThemedText
+                            numberOfLines={1}
+                            style={[styles.statCount, { fontSize: statCountSize, lineHeight: statCountLineHeight }]}
+                          >
+                            {count}
+                          </ThemedText>
+                          <ThemedText
+                            numberOfLines={1}
+                            style={[styles.statLabel, { color: colors.mutedForeground, fontSize: statLabelSize, lineHeight: statLabelLineHeight }]}
+                          >
+                            {count === 1 ? 'пациент' : count < 5 ? 'пациента' : 'пациентов'}
                           </ThemedText>
                         </View>
-                      </View>
-                      <View style={styles.statBody}>
-                        <ThemedText
-                          numberOfLines={1}
-                          style={[styles.statCount, { fontSize: statCountSize, lineHeight: statCountLineHeight }]}
-                        >
-                          {count}
-                        </ThemedText>
-                        <ThemedText
-                          numberOfLines={1}
-                          style={[styles.statLabel, { color: colors.mutedForeground, fontSize: statLabelSize, lineHeight: statLabelLineHeight }]}
-                        >
-                          {count === 1 ? 'пациент' : count < 5 ? 'пациента' : 'пациентов'}
-                        </ThemedText>
-                      </View>
-                    </Card>
+                      </Card>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -332,6 +394,13 @@ const styles = StyleSheet.create({
   notifDot: {},
   notifText: {
     fontWeight: '500',
+  },
+  createButton: {
+    marginBottom: 20,
+  },
+  emptyCard: {
+    padding: 16,
+    alignItems: 'center',
   },
   section: {
     marginBottom: 24,
