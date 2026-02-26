@@ -43,6 +43,8 @@ export default function HomeScreen() {
   const notifTextSize = useAccessibilityFontSize(14);
   const statCountSize = useAccessibilityFontSize(28);
   const statLabelSize = useAccessibilityFontSize(12);
+  const statCountLineHeight = Math.round(statCountSize * 1.15);
+  const statLabelLineHeight = Math.round(statLabelSize * 1.25);
   const actionIconSize = useAccessibilityFontSize(24);
   const actionLabelSize = useAccessibilityFontSize(13);
   const welcomeTextSize = useAccessibilityFontSize(14);
@@ -140,8 +142,16 @@ export default function HomeScreen() {
                       </View>
                     </View>
                     <View style={styles.statBody}>
-                      <ThemedText style={[styles.statCount, { fontSize: statCountSize }]}>{count}</ThemedText>
-                      <ThemedText style={[styles.statLabel, { color: colors.mutedForeground, fontSize: statLabelSize }]}>
+                      <ThemedText
+                        numberOfLines={1}
+                        style={[styles.statCount, { fontSize: statCountSize, lineHeight: statCountLineHeight }]}
+                      >
+                        {count}
+                      </ThemedText>
+                      <ThemedText
+                        numberOfLines={1}
+                        style={[styles.statLabel, { color: colors.mutedForeground, fontSize: statLabelSize, lineHeight: statLabelLineHeight }]}
+                      >
                         {count === 1 ? 'пациент' : count < 5 ? 'пациента' : 'пациентов'}
                       </ThemedText>
                     </View>
@@ -246,7 +256,7 @@ const styles = StyleSheet.create({
     width: '47%' as any,
     flexGrow: 1,
     padding: 16,
-    minHeight: 120,
+    minHeight: 126,
     justifyContent: 'space-between',
   },
   statHeader: {
@@ -265,8 +275,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   statBody: {
-    marginTop: 16,
-    gap: 4,
+    marginTop: 18,
+    gap: 2,
+    minHeight: 66,
+    justifyContent: 'center',
   },
   readinessWrap: {
     width: 52,
@@ -285,9 +297,11 @@ const styles = StyleSheet.create({
   },
   statCount: {
     fontWeight: '700',
+    includeFontPadding: false,
   },
   statLabel: {
     fontWeight: '500',
+    includeFontPadding: false,
   },
   actionsRow: {
     flexDirection: 'row',
