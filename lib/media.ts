@@ -84,7 +84,7 @@ export async function getPatientMedia(patientId: number): Promise<ApiResponse<Me
 }
 
 export async function getMediaDownloadUrl(id: number): Promise<string> {
-  const res = await apiFetch<ApiResponse<{ url: string }>>(`/api/v1/media/${id}/download`);
+  const res = await apiFetch<ApiResponse<{ url: string }>>(`/api/v1/media/${id}/download-url`);
   return res.data.url;
 }
 

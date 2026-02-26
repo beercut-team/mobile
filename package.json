@@ -21,7 +21,8 @@
     "test:loinc": "node __tests__/medical-standards/loinc.test.js",
     "test:fhir": "node __tests__/medical-standards/fhir-mapper.test.js",
     "test:emias": "node __tests__/integrations/emias.test.js",
-    "test:riams": "node __tests__/integrations/riams.test.js"
+    "test:riams": "node __tests__/integrations/riams.test.js",
+    "test:api": "node ./scripts/test-api-updates.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

@@ -42,6 +42,16 @@ export interface ReviewChecklistItemRequest {
   review_note?: string;
 }
 
+export interface CreateChecklistItemRequest {
+  patient_id: number;
+  template_id: number;
+  name: string;
+  description: string;
+  category: string;
+  is_required: boolean;
+  expires_at?: string;
+}
+
 export async function getPatientChecklist(patientId: number): Promise<ApiResponse<ChecklistItem[]>> {
   return apiFetch<ApiResponse<ChecklistItem[]>>(`/api/v1/checklists/patient/${patientId}`);
 }
@@ -65,6 +75,15 @@ export async function reviewChecklistItem(
   data: ReviewChecklistItemRequest,
 ): Promise<void> {
   await apiFetch(`/api/v1/checklists/${id}/review`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createChecklistItem(
+  data: CreateChecklistItemRequest,
+): Promise<ApiResponse<ChecklistItem>> {
+  return apiFetch<ApiResponse<ChecklistItem>>('/api/v1/checklists', {
     method: 'POST',
     body: JSON.stringify(data),
   });

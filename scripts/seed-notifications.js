@@ -7,6 +7,7 @@
 
 const API_BASE_URL = 'https://api.beercut.tech';
 
+// Only 5 notification types are supported by the backend API
 const notificationTemplates = [
   {
     title: 'Статус изменен',
@@ -14,14 +15,9 @@ const notificationTemplates = [
     type: 'STATUS_CHANGE',
   },
   {
-    title: 'Назначен лечащий врач',
-    message: 'Вам назначен лечащий врач: Николаев Айсен Петрович',
-    type: 'DOCTOR_ASSIGNED',
-  },
-  {
-    title: 'Назначен хирург',
-    message: 'Вам назначен хирург: Васильев Ньургун Иванович',
-    type: 'SURGEON_ASSIGNED',
+    title: 'Новый комментарий',
+    message: 'Врач оставил комментарий к вашей карте',
+    type: 'NEW_COMMENT',
   },
   {
     title: 'Дата операции назначена',
@@ -29,14 +25,14 @@ const notificationTemplates = [
     type: 'SURGERY_SCHEDULED',
   },
   {
-    title: 'Диагноз установлен',
-    message: 'Установлен диагноз: Открытоугольная глаукома II стадии',
-    type: 'DIAGNOSIS_SET',
+    title: 'Истек срок чек-листа',
+    message: 'Срок выполнения предоперационного чек-листа истек',
+    type: 'CHECKLIST_EXPIRY',
   },
   {
-    title: 'Тип операции определен',
-    message: 'Назначена антиглаукомная операция на левом глазу (OS)',
-    type: 'OPERATION_TYPE_SET',
+    title: 'Напоминание об операции',
+    message: 'Ваша операция запланирована на завтра в 10:00',
+    type: 'SURGERY_REMINDER',
   },
 ];
 

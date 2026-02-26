@@ -2,17 +2,13 @@ import { apiFetch } from './api';
 import type { ApiResponse } from './auth';
 
 // Backend notification types (UPPER_SNAKE_CASE)
+// Only 5 types are supported by the backend API
 export type NotificationType =
   | 'STATUS_CHANGE'
-  | 'DOCTOR_ASSIGNED'
-  | 'SURGEON_ASSIGNED'
-  | 'SURGERY_SCHEDULED'
-  | 'DIAGNOSIS_SET'
-  | 'OPERATION_TYPE_SET'
   | 'NEW_COMMENT'
-  | 'CHECKLIST_UPDATE'
-  | 'IOL_CALCULATION'
-  | 'MEDIA_UPLOADED';
+  | 'SURGERY_SCHEDULED'
+  | 'CHECKLIST_EXPIRY'
+  | 'SURGERY_REMINDER';
 
 export interface Notification {
   id: number;
@@ -30,15 +26,10 @@ export interface Notification {
 export function getNotificationIcon(type: NotificationType): string {
   const iconMap: Record<NotificationType, string> = {
     STATUS_CHANGE: 'arrow.triangle.2.circlepath',
-    DOCTOR_ASSIGNED: 'person.badge.plus',
-    SURGEON_ASSIGNED: 'stethoscope',
-    SURGERY_SCHEDULED: 'calendar.badge.clock',
-    DIAGNOSIS_SET: 'doc.text.magnifyingglass',
-    OPERATION_TYPE_SET: 'cross.case',
     NEW_COMMENT: 'bubble.left.and.bubble.right',
-    CHECKLIST_UPDATE: 'checklist',
-    IOL_CALCULATION: 'function',
-    MEDIA_UPLOADED: 'doc.badge.arrow.up',
+    SURGERY_SCHEDULED: 'calendar.badge.clock',
+    CHECKLIST_EXPIRY: 'exclamationmark.triangle',
+    SURGERY_REMINDER: 'bell.badge',
   };
   return iconMap[type] || 'bell.fill';
 }

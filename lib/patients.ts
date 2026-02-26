@@ -1,4 +1,4 @@
-import { apiFetch } from './api';
+import { apiFetch, fetchWithTimeout, API_BASE_URL } from './api';
 import type { ApiResponse } from './auth';
 import type { MedicalStandardsMetadata } from './medical-standards';
 
@@ -92,6 +92,24 @@ export interface UpdatePatientRequest {
   policy_number?: string;
 }
 
+export interface PatientPublic {
+  id: number;
+  status: PatientStatus;
+  first_name: string;
+  last_name: string;
+  surgery_date?: string | null;
+}
+
+export interface BatchUpdateRequest {
+  timestamp: string; // ISO 8601
+  updates: Partial<UpdatePatientRequest>;
+}
+
+export interface BatchUpdateResponse {
+  success: boolean;
+  conflicts?: string[];
+}
+
 export interface PatientListParams {
   search?: string;
   status?: PatientStatus;
@@ -141,6 +159,30 @@ export async function changePatientStatus(
 
 export async function getDashboard(): Promise<ApiResponse<Record<string, number>>> {
   return apiFetch<ApiResponse<Record<string, number>>>('/api/v1/patients/dashboard');
+}
+
+export async function getPublicPatientStatus(code: string): Promise<ApiResponse<PatientPublic>> {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/api/public/status/${code}`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!res.ok) {
+    const message = res.status === 404 ? 'Пациент не найден' : 'Ошибка получения статуса';
+    throw new Error(message);
+  }
+
+  return res.json() as Promise<ApiResponse<PatientPublic>>;
+}
+
+export async function batchUpdatePatient(
+  id: number,
+  data: BatchUpdateRequest
+): Promise<ApiResponse<BatchUpdateResponse>> {
+  return apiFetch<ApiResponse<BatchUpdateResponse>>(`/api/v1/patients/${id}/batch-update`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }
 
 // ============================================================================

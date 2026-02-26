@@ -47,3 +47,10 @@ app-example
 tmp/
 *.tmp
 *.log
+
+# MCP Servers
+mcp-servers/*/venv/
+mcp-servers/*/.env
+mcp-servers/*/__pycache__/
+mcp-servers/*/*.pyc
+mcp-servers/*/.pytest_cache/

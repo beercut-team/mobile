@@ -25,6 +25,8 @@ function generateNotifications(patientId) {
     return date.toISOString();
   };
 
+  // Only 5 notification types are supported by the backend API:
+  // STATUS_CHANGE, NEW_COMMENT, SURGERY_SCHEDULED, CHECKLIST_EXPIRY, SURGERY_REMINDER
   return [
     // 1. Status NEW → PREPARATION (3 days ago = 72 hours)
     {
@@ -33,106 +35,73 @@ function generateNotifications(patientId) {
       entity_type: 'patient',
       title: 'Статус изменен',
       body: 'Ваш статус изменен на: На подготовке',
-      type: 'status_change',
+      type: 'STATUS_CHANGE',
       created_at: hoursAgo(72)
     },
 
-    // 2. Doctor assigned (3 days ago = 71 hours)
-    {
-      user_id: patientId,
-      entity_id: patientId,
-      entity_type: 'patient',
-      title: 'Назначен лечащий врач',
-      body: 'Вам назначен лечащий врач: Николаев Айсен Петрович',
-      type: 'doctor_assigned',
-      created_at: hoursAgo(71)
-    },
-
-    // 3. Diagnosis set (2 days ago = 48 hours)
-    {
-      user_id: patientId,
-      entity_id: patientId,
-      entity_type: 'patient',
-      title: 'Диагноз установлен',
-      body: 'Установлен диагноз: Открытоугольная глаукома II стадии',
-      type: 'diagnosis_set',
-      created_at: hoursAgo(48)
-    },
-
-    // 4. Operation type set (2 days ago = 47 hours)
-    {
-      user_id: patientId,
-      entity_id: patientId,
-      entity_type: 'patient',
-      title: 'Тип операции определен',
-      body: 'Назначена операция: Антиглаукоматозная операция (левый глаз)',
-      type: 'operation_type_set',
-      created_at: hoursAgo(47)
-    },
-
-    // 5. Surgeon assigned (1 day ago = 24 hours)
-    {
-      user_id: patientId,
-      entity_id: patientId,
-      entity_type: 'patient',
-      title: 'Назначен хирург',
-      body: 'Вам назначен хирург: Васильев Ньургун Иванович',
-      type: 'surgeon_assigned',
-      created_at: hoursAgo(24)
-    },
-
-    // 6. Status PREPARATION → REVIEW_NEEDED (1 day ago = 23 hours)
+    // 2. Status PREPARATION → REVIEW_NEEDED (2 days ago = 48 hours)
     {
       user_id: patientId,
       entity_id: patientId,
       entity_type: 'patient',
       title: 'Статус изменен',
       body: 'Ваш статус изменен на: Требуется проверка',
-      type: 'status_change',
-      created_at: hoursAgo(23)
+      type: 'STATUS_CHANGE',
+      created_at: hoursAgo(48)
     },
 
-    // 7. Comment added (12 hours ago)
+    // 3. Comment added (1 day ago = 24 hours)
     {
       user_id: patientId,
       entity_id: patientId,
       entity_type: 'patient',
       title: 'Новый комментарий',
       body: 'Николаев Айсен: Пожалуйста, сдайте анализы крови до 5 марта',
-      type: 'comment',
-      created_at: hoursAgo(12)
+      type: 'NEW_COMMENT',
+      created_at: hoursAgo(24)
     },
 
-    // 8. Status REVIEW_NEEDED → APPROVED (6 hours ago)
+    // 4. Status REVIEW_NEEDED → APPROVED (12 hours ago)
     {
       user_id: patientId,
       entity_id: patientId,
       entity_type: 'patient',
       title: 'Статус изменен',
       body: 'Ваш статус изменен на: Одобрен',
-      type: 'status_change',
-      created_at: hoursAgo(6)
+      type: 'STATUS_CHANGE',
+      created_at: hoursAgo(12)
     },
 
-    // 9. Surgery scheduled (3 hours ago)
+    // 5. Surgery scheduled (6 hours ago)
     {
       user_id: patientId,
       entity_id: patientId,
       entity_type: 'patient',
       title: 'Дата операции назначена',
       body: 'Ваша операция назначена на 11 ноября 2026',
-      type: 'surgery_scheduled',
-      created_at: hoursAgo(3)
+      type: 'SURGERY_SCHEDULED',
+      created_at: hoursAgo(6)
     },
 
-    // 10. Checklist created (1 hour ago)
+    // 6. Checklist expiry warning (3 hours ago)
     {
       user_id: patientId,
       entity_id: patientId,
       entity_type: 'patient',
-      title: 'Обновлен чек-лист',
-      body: 'Создан предоперационный чек-лист',
-      type: 'checklist_update',
+      title: 'Истек срок чек-листа',
+      body: 'Срок выполнения предоперационного чек-листа истек',
+      type: 'CHECKLIST_EXPIRY',
+      created_at: hoursAgo(3)
+    },
+
+    // 7. Surgery reminder (1 hour ago)
+    {
+      user_id: patientId,
+      entity_id: patientId,
+      entity_type: 'patient',
+      title: 'Напоминание об операции',
+      body: 'Ваша операция запланирована на завтра в 10:00',
+      type: 'SURGERY_REMINDER',
       created_at: hoursAgo(1)
     }
   ];

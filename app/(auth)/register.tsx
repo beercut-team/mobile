@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -7,6 +7,7 @@ import {
   Text,
   View,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
@@ -21,11 +22,12 @@ import { Colors } from '@/constants/theme';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { Select } from '@/components/ui/select';
 import type { UserRole } from '@/lib/auth';
 import { applyPhoneMask, unmaskPhone, isPhoneComplete } from '@/lib/phone-mask';
+import { getDistricts, type District } from '@/lib/districts';
 
 const ROLES: { value: UserRole; label: string; desc: string }[] = [
-  { value: 'PATIENT', label: 'Пациент', desc: 'Отслеживание подготовки' },
   { value: 'DISTRICT_DOCTOR', label: 'Районный врач', desc: 'Подготовка пациентов' },
   { value: 'SURGEON', label: 'Хирург', desc: 'Проверка и операции' },
 ];
@@ -36,6 +38,7 @@ interface FieldErrors {
   phone?: string;
   password?: string;
   confirmPassword?: string;
+  district?: string;
 }
 
 function validateEmail(email: string): boolean {
@@ -66,6 +69,7 @@ export default function RegisterScreen() {
   const fieldLabelSize = useAccessibilityFontSize(14);
   const roleLabelSize = useAccessibilityFontSize(15);
   const roleDescSize = useAccessibilityFontSize(12);
+  const passwordHintSize = useAccessibilityFontSize(12);
   const borderRadius = useAccessibilityFontSize(12);
   const roleCardPadding = useAccessibilityFontSize(14);
 
@@ -74,9 +78,30 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phone, setPhone] = useState('');
-  const [role, setRole] = useState<UserRole>('PATIENT');
+  const [role, setRole] = useState<UserRole>('DISTRICT_DOCTOR');
+  const [districtId, setDistrictId] = useState<number | undefined>();
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+  const [districtsError, setDistrictsError] = useState<string | null>(null);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const fetchDistricts = async () => {
+      setLoadingDistricts(true);
+      setDistrictsError(null);
+      try {
+        const response = await getDistricts({ limit: 100 }); // Fetch all districts
+        setDistricts(response.data || []);
+      } catch (err) {
+        setDistrictsError(err instanceof Error ? err.message : 'Не удалось загрузить районы');
+      } finally {
+        setLoadingDistricts(false);
+      }
+    };
+
+    fetchDistricts();
+  }, []);
 
   const handlePhoneChange = useCallback((text: string) => {
     const newValue = applyPhoneMask(text, phone);
@@ -142,8 +167,12 @@ export default function RegisterScreen() {
     if (!confirmPassword) next.confirmPassword = 'Подтвердите пароль';
     else if (confirmPassword !== password) next.confirmPassword = 'Пароли не совпадают';
 
+    if (role === 'DISTRICT_DOCTOR' && !districtId) {
+      next.district = 'Выберите район';
+    }
+
     setErrors(next);
-    setTouched({ name: true, email: true, password: true, confirmPassword: true, phone: true });
+    setTouched({ name: true, email: true, password: true, confirmPassword: true, phone: true, district: true });
     return !Object.values(next).some(Boolean);
   };
 
@@ -156,6 +185,7 @@ export default function RegisterScreen() {
         name: name.trim(),
         phone: rawPhone.length === 11 ? `+${rawPhone}` : undefined,
         role,
+        district_id: districtId,
       });
     },
     onSuccess: () => {
@@ -216,7 +246,13 @@ export default function RegisterScreen() {
               return (
                 <Pressable
                   key={r.value}
-                  onPress={() => setRole(r.value)}
+                  onPress={() => {
+                    setRole(r.value);
+                    if (r.value !== 'DISTRICT_DOCTOR') {
+                      setDistrictId(undefined);
+                      setErrors((prev) => ({ ...prev, district: undefined }));
+                    }
+                  }}
                   style={[
                     styles.roleCard,
                     {
@@ -244,6 +280,47 @@ export default function RegisterScreen() {
               );
             })}
           </View>
+
+          {/* District Selection - Only for DISTRICT_DOCTOR */}
+          {role === 'DISTRICT_DOCTOR' && (
+            <>
+              {loadingDistricts ? (
+                <View style={[styles.districtLoading, { backgroundColor: colors.muted, borderRadius }]}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={[styles.districtLoadingText, { color: colors.mutedForeground, fontSize: errorTextSize }]}>
+                    Загрузка районов...
+                  </Text>
+                </View>
+              ) : districtsError ? (
+                <View style={[styles.districtError, { backgroundColor: colors.destructive + '12', borderColor: colors.destructive + '30', borderRadius }]}>
+                  <Text style={[styles.districtErrorText, { color: colors.destructive, fontSize: errorTextSize }]}>
+                    {districtsError}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.field}>
+                  <Select
+                    label="Район"
+                    placeholder="Выберите район"
+                    value={districtId?.toString() || ''}
+                    onChange={(value) => {
+                      setDistrictId(value ? parseInt(value, 10) : undefined);
+                      setErrors((prev) => ({ ...prev, district: undefined }));
+                    }}
+                    options={districts.map((d) => ({
+                      label: d.code ? `${d.name} (Код: ${d.code})` : d.name,
+                      value: d.id.toString(),
+                    }))}
+                  />
+                  {errors.district && (
+                    <Text style={[styles.errorText, { color: colors.destructive, fontSize: errorTextSize }]}>
+                      {errors.district}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </>
+          )}
 
           <Input
             label="ФИО"
@@ -282,7 +359,7 @@ export default function RegisterScreen() {
 
           <Input
             label="Пароль"
-            placeholder="Минимум 6 символов"
+            placeholder="Минимум 8 символов"
             value={password}
             onChangeText={(v) => handleFieldChange('password', v, setPassword)}
             onBlur={() => handleBlur('password')}
@@ -291,6 +368,54 @@ export default function RegisterScreen() {
             containerStyle={styles.field}
             error={errors.password}
           />
+
+          {/* Password Strength Indicator */}
+          {password.length > 0 && (
+            <View style={styles.passwordHints}>
+              <View style={styles.passwordHintRow}>
+                <Text style={[
+                  styles.passwordHintIcon,
+                  { color: password.length >= 8 ? '#10B981' : colors.mutedForeground, fontSize: passwordHintSize }
+                ]}>
+                  {password.length >= 8 ? '✓' : '○'}
+                </Text>
+                <Text style={[
+                  styles.passwordHintText,
+                  { color: password.length >= 8 ? '#10B981' : colors.mutedForeground, fontSize: passwordHintSize }
+                ]}>
+                  Минимум 8 символов
+                </Text>
+              </View>
+              <View style={styles.passwordHintRow}>
+                <Text style={[
+                  styles.passwordHintIcon,
+                  { color: /[A-Z]/.test(password) ? '#10B981' : colors.mutedForeground, fontSize: passwordHintSize }
+                ]}>
+                  {/[A-Z]/.test(password) ? '✓' : '○'}
+                </Text>
+                <Text style={[
+                  styles.passwordHintText,
+                  { color: /[A-Z]/.test(password) ? '#10B981' : colors.mutedForeground, fontSize: passwordHintSize }
+                ]}>
+                  Заглавная буква (A-Z)
+                </Text>
+              </View>
+              <View style={styles.passwordHintRow}>
+                <Text style={[
+                  styles.passwordHintIcon,
+                  { color: /[0-9]/.test(password) ? '#10B981' : colors.mutedForeground, fontSize: passwordHintSize }
+                ]}>
+                  {/[0-9]/.test(password) ? '✓' : '○'}
+                </Text>
+                <Text style={[
+                  styles.passwordHintText,
+                  { color: /[0-9]/.test(password) ? '#10B981' : colors.mutedForeground, fontSize: passwordHintSize }
+                ]}>
+                  Цифра (0-9)
+                </Text>
+              </View>
+            </View>
+          )}
 
           <Input
             label="Подтверждение пароля"
@@ -386,5 +511,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 24,
+  },
+  districtLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    marginBottom: 20,
+    gap: 8,
+  },
+  districtLoadingText: {
+    marginLeft: 8,
+  },
+  districtError: {
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 20,
+  },
+  districtErrorText: {
+    lineHeight: 18,
+  },
+  passwordHints: {
+    marginTop: -8,
+    marginBottom: 16,
+    gap: 6,
+  },
+  passwordHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  passwordHintIcon: {
+    fontWeight: '600',
+    width: 16,
+  },
+  passwordHintText: {
+    flex: 1,
+  },
+  errorText: {
+    marginTop: 4,
   },
 });

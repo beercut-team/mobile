@@ -11,6 +11,7 @@ export interface RegisterRequest {
   middle_name?: string;
   phone?: string;
   role?: UserRole;
+  district_id?: number;
 }
 
 export interface LoginRequest {
@@ -20,6 +21,10 @@ export interface LoginRequest {
 
 export interface PatientLoginRequest {
   access_code: string;
+}
+
+export interface TelegramTokenRequest {
+  token: string;
 }
 
 export interface AuthResponse {
@@ -102,6 +107,25 @@ export async function loginPatient(data: PatientLoginRequest): Promise<AuthRespo
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      const body = await res.json();
+      message = body.error ?? body.message ?? body.detail ?? message;
+    } catch {}
+    throw new Error(message);
+  }
+
+  return res.json();
+}
+
+export async function telegramTokenLogin(token: string): Promise<AuthResponse> {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/api/v1/auth/telegram-token-login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
   });
 
   if (!res.ok) {
