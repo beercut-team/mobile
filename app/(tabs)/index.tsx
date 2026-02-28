@@ -55,6 +55,7 @@ export default function HomeScreen() {
   const dotSize = useAccessibilityFontSize(8);
   const rolePadding = useAccessibilityFontSize(12);
   const borderRadius = useAccessibilityFontSize(12);
+  const roleReservedWidth = useAccessibilityFontSize(118);
 
   const showDashboard = hasRole('DISTRICT_DOCTOR', 'SURGEON', 'ADMIN');
   const isPatient = hasRole('PATIENT');
@@ -121,11 +122,11 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={[styles.headerIdentity, { paddingRight: roleReservedWidth }]}>
             <ThemedText style={[styles.greeting, { color: colors.mutedForeground, fontSize: greetingSize }]}>
               {greeting()}
             </ThemedText>
-            <ThemedText type="title" style={styles.name}>
+            <ThemedText type="title" style={styles.name} numberOfLines={2}>
               {user?.name ?? user?.first_name ?? 'Пользователь'}
             </ThemedText>
           </View>
@@ -164,7 +165,20 @@ export default function HomeScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Недавние пациенты
             </ThemedText>
-            {recentLoading && <ActivityIndicator size="large" color={colors.primary} />}
+            {/* Skeleton loader for first load */}
+            {recentLoading && !recentPatients?.data && (
+              <>
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} style={styles.skeletonCard}>
+                    <View style={[styles.skeletonLine, { backgroundColor: colors.muted, width: '60%', height: 16 }]} />
+                    <View style={[styles.skeletonLine, { backgroundColor: colors.muted, width: '40%', height: 14, marginTop: 8 }]} />
+                    <View style={[styles.skeletonLine, { backgroundColor: colors.muted, width: '30%', height: 12, marginTop: 8 }]} />
+                  </Card>
+                ))}
+              </>
+            )}
+            {/* ActivityIndicator for pull-to-refresh */}
+            {recentLoading && recentPatients?.data && <ActivityIndicator size="large" color={colors.primary} />}
             {!recentLoading && recentPatients.data?.length === 0 && (
               <Card style={styles.emptyCard}>
                 <ThemedText style={{ color: colors.mutedForeground }}>
@@ -419,17 +433,26 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   header: {
+    position: 'relative',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 24,
+  },
+  headerIdentity: {
+    flex: 1,
+    minWidth: 0,
   },
   greeting: {
     marginBottom: 4,
   },
-  name: {},
+  name: {
+    flexShrink: 1,
+  },
   roleBadge: {
-    marginTop: 4,
+    position: 'absolute',
+    right: 0,
+    top: -2,
+    maxWidth: '45%',
   },
   roleText: {
     fontWeight: '600',
@@ -553,5 +576,13 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
+  },
+  skeletonCard: {
+    marginBottom: 12,
+    minHeight: 100,
+  },
+  skeletonLine: {
+    borderRadius: 4,
+    opacity: 0.3,
   },
 });

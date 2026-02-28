@@ -83,8 +83,7 @@ export default function PatientsScreen() {
       setStatusFilter(params.statusFilter);
       setPage(1); // Reset to first page
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.statusFilter]);
+  }, [params.statusFilter, statusFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 500);

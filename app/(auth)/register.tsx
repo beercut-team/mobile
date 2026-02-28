@@ -47,10 +47,6 @@ function validateEmail(email: string): boolean {
 
 function validatePassword(password: string): string | undefined {
   if (!password) return 'Введите пароль';
-  if (password.length < 8) return 'Минимум 8 символов';
-  if (!/[A-Z]/.test(password)) return 'Требуется заглавная буква';
-  if (!/[a-z]/.test(password)) return 'Требуется строчная буква';
-  if (!/[0-9]/.test(password)) return 'Требуется цифра';
   return undefined;
 }
 

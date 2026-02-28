@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +14,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useToast } from '@/contexts/toast-context';
+import { useAuth } from '@/contexts/auth-context';
 import { useAccessibility } from '@/contexts/accessibility-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccessibilityFontSize } from '@/hooks/use-accessibility-font-size';
@@ -21,7 +23,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { applyPhoneMask, unmaskPhone, isPhoneComplete } from '@/lib/phone-mask';
+import { applyDateMask, isDateValid, isDateInFuture, isDateComplete } from '@/lib/date-mask';
 import { getDistricts, type District } from '@/lib/districts';
 import {
   createPatient,
@@ -34,7 +38,12 @@ import {
 interface FieldErrors {
   first_name?: string;
   last_name?: string;
+  date_of_birth?: string;
   phone?: string;
+  email?: string;
+  snils?: string;
+  passport_series?: string;
+  passport_number?: string;
   operation_type?: string;
   eye?: string;
   district_id?: string;
@@ -43,6 +52,7 @@ interface FieldErrors {
 export default function CreatePatientScreen() {
   const router = useRouter();
   const { showToast } = useToast();
+  const { user, hasRole } = useAuth();
   const { isAccessibilityMode } = useAccessibility();
   const theme = useColorScheme() ?? 'light';
   const colors = isAccessibilityMode ? Colors.highContrast : Colors[theme];
@@ -79,6 +89,13 @@ export default function CreatePatientScreen() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
+  // Auto-set district for district doctors
+  useEffect(() => {
+    if (user?.district_id) {
+      setDistrictId(user.district_id);
+    }
+  }, [user]);
+
   // Fetch districts on mount
   useEffect(() => {
     const fetchDistricts = async () => {
@@ -105,6 +122,32 @@ export default function CreatePatientScreen() {
     }
   }, [phone, touched.phone]);
 
+  const handleDateChange = useCallback((text: string) => {
+    const newValue = applyDateMask(text, dateOfBirth);
+    setDateOfBirth(newValue);
+    if (touched.date_of_birth) {
+      setErrors((prev) => ({ ...prev, date_of_birth: undefined }));
+    }
+  }, [dateOfBirth, touched.date_of_birth]);
+
+  const handleSnilsChange = useCallback((text: string) => {
+    // Remove all non-digits
+    const digits = text.replace(/\D/g, '');
+
+    // Apply mask: XXX-XXX-XXX XX
+    let masked = '';
+    for (let i = 0; i < Math.min(digits.length, 11); i++) {
+      if (i === 3 || i === 6) masked += '-';
+      if (i === 9) masked += ' ';
+      masked += digits[i];
+    }
+
+    setSnils(masked);
+    if (touched.snils) {
+      setErrors((prev) => ({ ...prev, snils: undefined }));
+    }
+  }, [touched.snils]);
+
   const handleBlur = useCallback((field: keyof FieldErrors) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
 
@@ -119,9 +162,48 @@ export default function CreatePatientScreen() {
           if (!lastName.trim()) next.last_name = 'Введите фамилию';
           else next.last_name = undefined;
           break;
+        case 'date_of_birth':
+          if (dateOfBirth && !isDateComplete(dateOfBirth)) {
+            next.date_of_birth = 'Введите полную дату';
+          } else if (dateOfBirth && !isDateValid(dateOfBirth)) {
+            next.date_of_birth = 'Введите корректную дату';
+          } else if (dateOfBirth && isDateInFuture(dateOfBirth)) {
+            next.date_of_birth = 'Дата не может быть в будущем';
+          } else {
+            next.date_of_birth = undefined;
+          }
+          break;
         case 'phone':
           if (phone && !isPhoneComplete(phone)) next.phone = 'Введите полный номер';
           else next.phone = undefined;
+          break;
+        case 'email':
+          if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            next.email = 'Введите корректный email';
+          } else {
+            next.email = undefined;
+          }
+          break;
+        case 'snils':
+          if (snils && snils.length !== 14) {
+            next.snils = 'СНИЛС должен содержать 11 цифр';
+          } else {
+            next.snils = undefined;
+          }
+          break;
+        case 'passport_series':
+          if (passportSeries && passportSeries.length !== 4) {
+            next.passport_series = 'Серия должна содержать 4 цифры';
+          } else {
+            next.passport_series = undefined;
+          }
+          break;
+        case 'passport_number':
+          if (passportNumber && passportNumber.length !== 6) {
+            next.passport_number = 'Номер должен содержать 6 цифр';
+          } else {
+            next.passport_number = undefined;
+          }
           break;
         case 'operation_type':
           if (!operationType) next.operation_type = 'Выберите тип операции';
@@ -132,13 +214,20 @@ export default function CreatePatientScreen() {
           else next.eye = undefined;
           break;
         case 'district_id':
-          if (!districtId) next.district_id = 'Выберите район';
-          else next.district_id = undefined;
+          if (!districtId) {
+            if (hasRole('DISTRICT_DOCTOR')) {
+              next.district_id = 'У вас не указан район. Обратитесь к администратору.';
+            } else if (hasRole('ADMIN')) {
+              next.district_id = 'Выберите район';
+            }
+          } else {
+            next.district_id = undefined;
+          }
           break;
       }
       return next;
     });
-  }, [firstName, lastName, phone, operationType, eye, districtId]);
+  }, [firstName, lastName, dateOfBirth, phone, email, snils, passportSeries, passportNumber, operationType, eye, districtId, hasRole]);
 
   const handleFieldChange = useCallback((field: keyof FieldErrors, value: string, setter: (v: string) => void) => {
     setter(value);
@@ -152,16 +241,48 @@ export default function CreatePatientScreen() {
 
     if (!firstName.trim()) next.first_name = 'Введите имя';
     if (!lastName.trim()) next.last_name = 'Введите фамилию';
+    if (dateOfBirth && !isDateComplete(dateOfBirth)) {
+      next.date_of_birth = 'Введите полную дату';
+    } else if (dateOfBirth && !isDateValid(dateOfBirth)) {
+      next.date_of_birth = 'Введите корректную дату';
+    } else if (dateOfBirth && isDateInFuture(dateOfBirth)) {
+      next.date_of_birth = 'Дата не может быть в будущем';
+    }
     if (phone && !isPhoneComplete(phone)) next.phone = 'Введите полный номер';
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      next.email = 'Введите корректный email';
+    }
+    if (snils && snils.length !== 14) {
+      next.snils = 'СНИЛС должен содержать 11 цифр';
+    }
+    if (passportSeries && passportSeries.length !== 4) {
+      next.passport_series = 'Серия должна содержать 4 цифры';
+    }
+    if (passportNumber && passportNumber.length !== 6) {
+      next.passport_number = 'Номер должен содержать 6 цифр';
+    }
     if (!operationType) next.operation_type = 'Выберите тип операции';
     if (!eye) next.eye = 'Выберите глаз';
-    if (!districtId) next.district_id = 'Выберите район';
+
+    // District validation
+    if (!districtId) {
+      if (hasRole('DISTRICT_DOCTOR')) {
+        next.district_id = 'У вас не указан район. Обратитесь к администратору.';
+      } else if (hasRole('ADMIN')) {
+        next.district_id = 'Выберите район';
+      }
+    }
 
     setErrors(next);
     setTouched({
       first_name: true,
       last_name: true,
+      date_of_birth: true,
       phone: true,
+      email: true,
+      snils: true,
+      passport_series: true,
+      passport_number: true,
       operation_type: true,
       eye: true,
       district_id: true,
@@ -223,6 +344,26 @@ export default function CreatePatientScreen() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Back Button */}
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => [
+            styles.backButton,
+            { opacity: pressed ? 0.6 : 1 }
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Назад"
+        >
+          <IconSymbol
+            name="chevron.left"
+            size={24}
+            color={colors.text}
+          />
+          <Text style={[styles.backText, { color: colors.text }]}>
+            Назад
+          </Text>
+        </Pressable>
+
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text, fontSize: titleSize }]}>
             Новый пациент
@@ -285,48 +426,79 @@ export default function CreatePatientScreen() {
             label="Дата рождения"
             placeholder="ДД.ММ.ГГГГ"
             value={dateOfBirth}
-            onChangeText={setDateOfBirth}
+            onChangeText={handleDateChange}
+            onBlur={() => handleBlur('date_of_birth')}
             keyboardType="numbers-and-punctuation"
             containerStyle={styles.field}
+            error={errors.date_of_birth}
           />
 
-          {/* District Selection */}
-          {loadingDistricts ? (
-            <View style={[styles.districtLoading, { backgroundColor: colors.muted, borderRadius }]}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={[styles.districtLoadingText, { color: colors.mutedForeground, fontSize: errorTextSize }]}>
-                Загрузка районов...
-              </Text>
-            </View>
-          ) : districtsError ? (
-            <View style={[styles.districtError, { backgroundColor: colors.destructive + '12', borderColor: colors.destructive + '30', borderRadius }]}>
-              <Text style={[styles.districtErrorText, { color: colors.destructive, fontSize: errorTextSize }]}>
-                {districtsError}
-              </Text>
-            </View>
-          ) : (
+          {/* District info for district doctors */}
+          {hasRole('DISTRICT_DOCTOR') && (
             <View style={styles.field}>
-              <Select
-                label="Район *"
-                placeholder="Выберите район"
-                value={districtId?.toString() || ''}
-                onChange={(value) => {
-                  setDistrictId(value ? parseInt(value, 10) : undefined);
-                  if (touched.district_id) {
-                    setErrors((prev) => ({ ...prev, district_id: undefined }));
-                  }
-                }}
-                options={districts.map((d) => ({
-                  label: d.code ? `${d.name} (Код: ${d.code})` : d.name,
-                  value: d.id.toString(),
-                }))}
-              />
-              {errors.district_id && (
-                <Text style={[styles.errorText, { color: colors.destructive, fontSize: errorTextSize }]}>
-                  {errors.district_id}
-                </Text>
+              <Text style={[styles.label, { color: colors.text, fontSize: errorTitleSize }]}>
+                Район *
+              </Text>
+              {districtId ? (
+                <View style={[styles.districtInfo, { backgroundColor: colors.muted, borderRadius }]}>
+                  <Text style={[styles.districtInfoText, { color: colors.text }]}>
+                    {districts.find(d => d.id === districtId)?.name || `Район #${districtId}`}
+                  </Text>
+                  <Text style={[styles.districtInfoHint, { color: colors.mutedForeground, fontSize: errorTextSize }]}>
+                    Автоматически назначен из вашего профиля
+                  </Text>
+                </View>
+              ) : (
+                <View style={[styles.districtError, { backgroundColor: colors.destructive + '12', borderColor: colors.destructive + '30', borderRadius }]}>
+                  <Text style={[styles.districtErrorText, { color: colors.destructive, fontSize: errorTextSize }]}>
+                    У вас не указан район. Обратитесь к администратору для назначения района.
+                  </Text>
+                </View>
               )}
             </View>
+          )}
+
+          {/* District Selection - Only for admins, auto-assigned for district doctors */}
+          {hasRole('ADMIN') && (
+            <>
+              {loadingDistricts ? (
+                <View style={[styles.districtLoading, { backgroundColor: colors.muted, borderRadius }]}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={[styles.districtLoadingText, { color: colors.mutedForeground, fontSize: errorTextSize }]}>
+                    Загрузка районов...
+                  </Text>
+                </View>
+              ) : districtsError ? (
+                <View style={[styles.districtError, { backgroundColor: colors.destructive + '12', borderColor: colors.destructive + '30', borderRadius }]}>
+                  <Text style={[styles.districtErrorText, { color: colors.destructive, fontSize: errorTextSize }]}>
+                    {districtsError}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.field}>
+                  <Select
+                    label="Район *"
+                    placeholder="Выберите район"
+                    value={districtId?.toString() || ''}
+                    onChange={(value) => {
+                      setDistrictId(value ? parseInt(value, 10) : undefined);
+                      if (touched.district_id) {
+                        setErrors((prev) => ({ ...prev, district_id: undefined }));
+                      }
+                    }}
+                    options={districts.map((d) => ({
+                      label: d.code ? `${d.name} (Код: ${d.code})` : d.name,
+                      value: d.id.toString(),
+                    }))}
+                  />
+                  {errors.district_id && (
+                    <Text style={[styles.errorText, { color: colors.destructive, fontSize: errorTextSize }]}>
+                      {errors.district_id}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </>
           )}
 
           {/* Operation Details */}
@@ -411,11 +583,13 @@ export default function CreatePatientScreen() {
             label="Email"
             placeholder="patient@example.com"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(v) => handleFieldChange('email', v, setEmail)}
+            onBlur={() => handleBlur('email')}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
             containerStyle={styles.field}
+            error={errors.email}
           />
 
           <Input
@@ -438,29 +612,51 @@ export default function CreatePatientScreen() {
             label="СНИЛС"
             placeholder="123-456-789 00"
             value={snils}
-            onChangeText={setSnils}
+            onChangeText={handleSnilsChange}
+            onBlur={() => handleBlur('snils')}
             keyboardType="numbers-and-punctuation"
             containerStyle={styles.field}
+            error={errors.snils}
           />
 
           <View style={styles.row}>
-            <Input
-              label="Серия паспорта"
-              placeholder="1234"
-              value={passportSeries}
-              onChangeText={setPassportSeries}
-              keyboardType="number-pad"
-              containerStyle={[styles.field, styles.halfField]}
-            />
+            <View style={styles.halfField}>
+              <Input
+                label="Серия паспорта"
+                placeholder="1234"
+                value={passportSeries}
+                onChangeText={(v) => {
+                  const digits = v.replace(/\D/g, '').slice(0, 4);
+                  setPassportSeries(digits);
+                  if (touched.passport_series) {
+                    setErrors((prev) => ({ ...prev, passport_series: undefined }));
+                  }
+                }}
+                onBlur={() => handleBlur('passport_series')}
+                keyboardType="number-pad"
+                containerStyle={styles.field}
+                error={errors.passport_series}
+              />
+            </View>
 
-            <Input
-              label="Номер паспорта"
-              placeholder="567890"
-              value={passportNumber}
-              onChangeText={setPassportNumber}
-              keyboardType="number-pad"
-              containerStyle={[styles.field, styles.halfField]}
-            />
+            <View style={styles.halfField}>
+              <Input
+                label="Номер паспорта"
+                placeholder="567890"
+                value={passportNumber}
+                onChangeText={(v) => {
+                  const digits = v.replace(/\D/g, '').slice(0, 6);
+                  setPassportNumber(digits);
+                  if (touched.passport_number) {
+                    setErrors((prev) => ({ ...prev, passport_number: undefined }));
+                  }
+                }}
+                onBlur={() => handleBlur('passport_number')}
+                keyboardType="number-pad"
+                containerStyle={styles.field}
+                error={errors.passport_number}
+              />
+            </View>
           </View>
 
           <Input
@@ -509,6 +705,16 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 24,
   },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 4,
+  },
+  backText: {
+    fontSize: 17,
+    fontWeight: '500',
+  },
   header: {
     marginBottom: 20,
   },
@@ -555,6 +761,21 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 8,
+  },
+  label: {
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  districtInfo: {
+    padding: 14,
+    gap: 4,
+  },
+  districtInfoText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  districtInfoHint: {
+    lineHeight: 16,
   },
   districtLoading: {
     flexDirection: 'row',
