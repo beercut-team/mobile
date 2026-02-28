@@ -164,5 +164,3 @@
 - **Expo Router** - file-based routing
 - **React Query** - server state management
 - **Reanimated** - плавные анимации
-
-🤖 Co-Authored-By: Claude Opus 4.6 (1M context)
